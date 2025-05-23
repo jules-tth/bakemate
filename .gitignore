@@ -1,0 +1,29 @@
+# Ignore dump files
+.dump/
+
+# Environment files
+.env
+
+# Node modules (if not directly listed in the project but often in subdirectories)
+node_modules/
+
+# Dependency directories
+dist/
+
+# Logs
+logs/
+*.log
+
+# System Files
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Docker
+*.db
+
+# Ignore specific config or secret files
+secret-*.json
+*.local

@@ -1,0 +1,23 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+psycopg2-binary
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+aiofiles
+requests
+# For SendGrid
+sendgrid
+# For Airtable (if using their Python client, otherwise requests is fine for REST)
+airtable-python-wrapper
+# For WeasyPrint
+WeasyPrint
+# PyJWT for JWT tokens
+PyJWT
+# For Stripe integration
+stripe
+# Addtional pkgs
+pydantic_settings
+pydantic[email]
+pytest
