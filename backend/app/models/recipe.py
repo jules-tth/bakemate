@@ -62,7 +62,7 @@ class RecipeCreate(SQLModel):
 
 class RecipeRead(SQLModel):
     id: uuid.UUID
-    user_id: uuid.UUID
+    user_id: str # Ensure user_id is serialized as string
     name: str
     description: Optional[str]
     steps: str
@@ -70,12 +70,23 @@ class RecipeRead(SQLModel):
     yield_unit: Optional[str]
     calculated_cost: Optional[float]
     ingredients: List[RecipeIngredientLinkRead] = [] # To show ingredient details
-    created_at: datetime
-    updated_at: datetime
+    created_at: str
+    updated_at: str
+
+    class Config:
+        orm_mode = True
+
+    @property
+    def created_at_str(self) -> str:
+        return self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at
+
+    @property
+    def updated_at_str(self) -> str:
+        return self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at
 
     def to_str(self):
-        self.created_at = self.created_at.isoformat()
-        self.updated_at = self.updated_at.isoformat()
+        self.created_at = self.created_at_str
+        self.updated_at = self.updated_at_str
 
 class RecipeUpdate(SQLModel):
     name: Optional[str] = None

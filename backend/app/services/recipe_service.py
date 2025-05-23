@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from typing import List, Optional, Tuple
 from uuid import UUID
 from sqlmodel import Session, select, delete
@@ -75,15 +77,35 @@ class RecipeService:
         return recipe
 
     async def get_recipes_by_user(self, *, current_user: User, skip: int = 0, limit: int = 100) -> List[Recipe]:
-        recipes = await self.recipe_repo.get_multi(
-            filters={"user_id": current_user.id},
-            skip=skip,
-            limit=limit
-        )
-        # Manually load ingredient links for each recipe
-        for recipe in recipes:
-            links_statement = select(RecipeIngredientLink).where(RecipeIngredientLink.recipe_id == recipe.id)
-            recipe.ingredient_links = self.session.exec(links_statement).all()
+        links_statement = (select(Recipe, RecipeIngredientLink)
+                          .join(RecipeIngredientLink, Recipe.id == RecipeIngredientLink.recipe_id)
+                          .where(Recipe.user_id == current_user.id))
+        result = self.session.exec(links_statement).all()
+
+        # Map to hold the recipes.
+        recipes_map = {}
+        for recipe, link in result:
+            user_id=str(recipe.user_id) if recipe.user_id else '',  # Ensure user_id is converted
+            if recipe.id not in recipes_map:
+                recipes_map[recipe.id] = recipe
+                recipes_map[recipe.id].ingredient_links = []
+            recipes_map[recipe.id].ingredient_links.append(link)
+
+        # Ensure collections are appropriately set as list-like.
+        recipes = [ Recipe(
+                    id=recipe_id,
+                    user_id=str(recipes_map[recipe_id].user_id),  # Correct conversion of user_id to string
+                    name=recipes_map[recipe_id].name,
+                    description=recipes_map[recipe_id].description,
+                    steps=recipes_map[recipe_id].steps,
+                    yield_quantity=recipes_map[recipe_id].yield_quantity,
+                    yield_unit=recipes_map[recipe_id].yield_unit,
+                    calculated_cost=recipes_map[recipe_id].calculated_cost,
+                    ingredient_links=[link for link in recipes_map[recipe_id].ingredient_links],
+                    created_at=recipes_map[recipe_id].created_at.isoformat() if isinstance(recipes_map[recipe_id].created_at, datetime) else recipes_map[recipe_id].created_at,
+                    updated_at=recipes_map[recipe_id].updated_at.isoformat() if isinstance(recipes_map[recipe_id].updated_at, datetime) else recipes_map[recipe_id].updated_at,
+                ) for recipe_id in recipes_map]
+
         return recipes
 
     async def update_recipe(
