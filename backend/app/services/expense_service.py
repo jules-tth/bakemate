@@ -7,7 +7,9 @@ from sqlmodel import Session, select
 from app.models.expense import Expense, ExpenseCreate, ExpenseUpdate, ExpenseCategory
 from app.models.user import User
 from app.repositories.sqlite_adapter import SQLiteRepository
-# For file uploads (receipts)
+# TODO: Implement cloud storage integration (e.g., AWS S3) for receipts
+# Use presigned URLs for secure access and management.
+
 import shutil
 from pathlib import Path
 from fastapi import UploadFile
