@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 import uuid
@@ -50,7 +52,7 @@ class RecipeIngredientLinkRead(SQLModel):
     cost: float # Cost of this ingredient amount in the recipe
 
 class RecipeCreate(SQLModel):
-    user_id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None # Set internally
     name: str
     description: Optional[str] = None
     steps: str
@@ -68,8 +70,12 @@ class RecipeRead(SQLModel):
     yield_unit: Optional[str]
     calculated_cost: Optional[float]
     ingredients: List[RecipeIngredientLinkRead] = [] # To show ingredient details
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
+
+    def to_str(self):
+        self.created_at = self.created_at.isoformat()
+        self.updated_at = self.updated_at.isoformat()
 
 class RecipeUpdate(SQLModel):
     name: Optional[str] = None
@@ -78,4 +84,3 @@ class RecipeUpdate(SQLModel):
     yield_quantity: Optional[float] = None
     yield_unit: Optional[str] = None
     ingredients: Optional[List[RecipeIngredientLinkCreate]] = None # Allow updating ingredients
-

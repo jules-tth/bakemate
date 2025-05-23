@@ -33,9 +33,13 @@ async def create_ingredient(
         # For now, we rely on the service to handle it or assume it's correct.
         pass
 
+    # Automatically set the user_id to ensure ownership.
+    ingredient_data = ingredient_in.model_dump(exclude_unset=True)
+    ingredient_data["user_id"] = UUID(str(current_user.id))
+    ingredient_in_corrected = IngredientCreate(**ingredient_data)
+
     ingredient_service = IngredientService(session=session)
-    # The service should ideally take current_user to ensure ownership
-    new_ingredient = await ingredient_service.create_ingredient(ingredient_in=ingredient_in, current_user=current_user)
+    new_ingredient = await ingredient_service.create_ingredient(ingredient_in=ingredient_in_corrected, current_user=current_user)
     return new_ingredient
 
 @router.get("/", response_model=List[IngredientRead])

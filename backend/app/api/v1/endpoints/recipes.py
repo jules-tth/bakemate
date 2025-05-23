@@ -28,8 +28,12 @@ async def create_recipe(
         # This should be handled, e.g., by overriding or raising an error.
         # For now, assume service or validation handles it.
         pass
+    recipe_data = recipe_in.model_dump(exclude_unset=True)
+    recipe_data["user_id"] = current_user.id
+    recipe_in_corrected = RecipeCreate(**recipe_data)
+
     recipe_service = RecipeService(session=session)
-    new_recipe = await recipe_service.create_recipe(recipe_in=recipe_in, current_user=current_user)
+    new_recipe = await recipe_service.create_recipe(recipe_in=recipe_in_corrected, current_user=current_user)
     return new_recipe
 
 @router.get("/", response_model=List[RecipeRead])

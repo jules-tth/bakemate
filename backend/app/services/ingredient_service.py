@@ -22,7 +22,10 @@ class IngredientService:
 
         # The repository handles the actual creation
         # db_ingredient = Ingredient(**ingredient_in.model_dump(), user_id=current_user.id) # Ensure user_id is set
-        db_ingredient = await self.ingredient_repo.create(obj_in=ingredient_in)
+        db_ingredient = Ingredient(**ingredient_in.model_dump(exclude={"user_id"}), user_id=current_user.id) # Ensure user_id is explicitly set
+        self.session.add(db_ingredient)
+        self.session.commit()  # Remove the await
+        self.session.refresh(db_ingredient)  # Remove the await
         return db_ingredient
 
     async def get_ingredient_by_id(self, *, ingredient_id: UUID, current_user: User) -> Optional[Ingredient]:
@@ -57,4 +60,3 @@ class IngredientService:
         
         deleted_ingredient = await self.ingredient_repo.delete(id=ingredient_id)
         return deleted_ingredient
-

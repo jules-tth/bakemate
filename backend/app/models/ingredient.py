@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 import uuid
@@ -27,7 +29,7 @@ class IngredientCreate(SQLModel):
     unit: str
     cost: float
     density: Optional[float] = None
-    user_id: uuid.UUID # Must be provided on creation
+    user_id: Optional[uuid.UUID] = None # Set internally
     quantity_on_hand: Optional[float] = 0
     low_stock_threshold: Optional[float] = None
 
@@ -40,8 +42,12 @@ class IngredientRead(SQLModel):
     user_id: uuid.UUID
     quantity_on_hand: Optional[float]
     low_stock_threshold: Optional[float]
-    created_at: str # Assuming datetime converted to str for API response
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
+
+    def to_str(self):
+        self.created_at = self.created_at.isoformat()
+        self.updated_at = self.updated_at.isoformat()
 
 class IngredientUpdate(SQLModel):
     name: Optional[str] = None

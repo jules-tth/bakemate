@@ -4,6 +4,8 @@ from jose import JWTError, jwt # PyJWT was used in jwt.py, but jose is also comm
 from pydantic import ValidationError
 from sqlmodel import Session
 
+from uuid import UUID
+
 from app.core.config import settings
 from app.models.user import User
 from app.models.token import TokenPayload # Using the one from models/token.py
@@ -29,7 +31,7 @@ async def get_current_user(
         )
     
     user_service = UserService(session=session)
-    user = await user_service.get_user_by_id(user_id=token_payload.sub)
+    user = await user_service.get_user_by_id(user_id=UUID(token_payload.sub))
     
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
