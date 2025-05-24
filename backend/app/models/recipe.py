@@ -75,18 +75,11 @@ class RecipeRead(SQLModel):
 
     class Config:
         orm_mode = True
-
-    @property
-    def created_at_str(self) -> str:
-        return self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at
-
-    @property
-    def updated_at_str(self) -> str:
-        return self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at
-
-    def to_str(self):
-        self.created_at = self.created_at_str
-        self.updated_at = self.updated_at_str
+        arbitrary_types_allowed = True
+        json_encoders = {
+            uuid.UUID: lambda v: str(v),
+            datetime: lambda v: v.isoformat(),
+        }
 
 class RecipeUpdate(SQLModel):
     name: Optional[str] = None

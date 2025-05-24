@@ -1,8 +1,8 @@
 from datetime import datetime
-
 from typing import List, Optional, Tuple
 from uuid import UUID
 from sqlmodel import Session, select, delete
+import uuid
 
 from app.models.recipe import Recipe, RecipeCreate, RecipeUpdate, RecipeIngredientLink, RecipeIngredientLinkCreate
 from app.models.ingredient import Ingredient
@@ -61,7 +61,7 @@ class RecipeService:
         
         self.session.commit()
         self.session.refresh(db_recipe) # Refresh again to get the links populated if relationships are set up correctly
-        return db_recipe
+        return self.serialize_recipe(db_recipe) # Ensure serialization before return
 
     async def get_recipe_by_id(self, *, recipe_id: UUID, current_user: User) -> Optional[Recipe]:
         # Fetch recipe
@@ -74,7 +74,7 @@ class RecipeService:
         # This is often needed if the session that loaded `recipe` is closed or if lazy loading is not effective here.
         links_statement = select(RecipeIngredientLink).where(RecipeIngredientLink.recipe_id == recipe.id)
         recipe.ingredient_links = self.session.exec(links_statement).all()
-        return recipe
+        return self.serialize_recipe(recipe)
 
     async def get_recipes_by_user(self, *, current_user: User, skip: int = 0, limit: int = 100) -> List[Recipe]:
         links_statement = (select(Recipe, RecipeIngredientLink)
@@ -141,7 +141,7 @@ class RecipeService:
         # Manually load links again after update
         links_statement = select(RecipeIngredientLink).where(RecipeIngredientLink.recipe_id == db_recipe.id)
         db_recipe.ingredient_links = self.session.exec(links_statement).all()
-        return db_recipe
+        return self.serialize_recipe(db_recipe)
 
     async def delete_recipe(self, *, recipe_id: UUID, current_user: User) -> Optional[Recipe]:
         db_recipe = await self.recipe_repo.get(id=recipe_id)
@@ -155,7 +155,7 @@ class RecipeService:
 
         deleted_recipe = await self.recipe_repo.delete(id=recipe_id) # This will commit the recipe deletion
         # The session commit within repo.delete() should handle it.
-        return deleted_recipe
+        return self.serialize_recipe(deleted_recipe)
 
     async def update_recipe_cost_on_ingredient_change(self, ingredient_id: UUID):
         """    Find all recipes using this ingredient and update their costs.
@@ -191,4 +191,9 @@ class RecipeService:
         if affected_recipe_ids:
             self.session.commit()
             print(f"Updated costs for recipes affected by ingredient {ingredient_id} change.")
+    
+    def serialize_recipe(self, recipe: Recipe) -> Recipe:
+        # Serialization fix to convert UUID and datetime fields to strings
+        serialized_recipe = {k: str(v) if isinstance(v, (uuid.UUID, datetime)) else v for k, v in recipe.dict().items()}
+        return Recipe(**serialized_recipe)
 
