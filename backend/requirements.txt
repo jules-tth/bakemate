@@ -21,3 +21,5 @@ stripe
 pydantic_settings
 pydantic[email]
 pytest
+httpx
+pytest-cov

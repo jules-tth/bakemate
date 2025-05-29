@@ -1,6 +1,7 @@
 .PHONY: run install test
 
 VENV_DIR = .venv
+export PYTHONPATH := .:$(PYTHONPATH)
 
 # Install dependencies
 install: activate
@@ -8,12 +9,11 @@ install: activate
 
 # Run the application
 run: activate
-	#$(VENV_DIR)/bin/python main.py
 	$(VENV_DIR)/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Run tests
 test: activate
-	$(VENV_DIR)/bin/pytest -v tests/
+	$(VENV_DIR)/bin/pytest -v --cov=app tests/
 
 activate:
 	@echo "Activating virtual environment at $(VENV_DIR)"

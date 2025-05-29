@@ -3,6 +3,7 @@
 
 # Environment files
 .env
+.venv
 
 # Node modules (if not directly listed in the project but often in subdirectories)
 node_modules/
@@ -27,3 +28,6 @@ __pycache__/
 # Ignore specific config or secret files
 secret-*.json
 *.local
+
+# Exclude code coverage
+.coverage

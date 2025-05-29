@@ -74,7 +74,8 @@ class RecipeRead(SQLModel):
     updated_at: str
 
     class Config:
-        orm_mode = True
+	## TODO: fix 'orm_mode' has been renamed to 'from_attributes'
+        #orm_mode = True
         arbitrary_types_allowed = True
         json_encoders = {
             uuid.UUID: lambda v: str(v),
