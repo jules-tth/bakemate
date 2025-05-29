@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 from uuid import UUID
 from sqlmodel import Session, select, delete
 import uuid
+from sqlalchemy.orm import selectinload
 
 from app.models.recipe import Recipe, RecipeCreate, RecipeUpdate, RecipeIngredientLink, RecipeIngredientLinkCreate
 from app.models.ingredient import Ingredient
@@ -64,17 +65,12 @@ class RecipeService:
         return self.serialize_recipe(db_recipe) # Ensure serialization before return
 
     async def get_recipe_by_id(self, *, recipe_id: UUID, current_user: User) -> Optional[Recipe]:
-        # Fetch recipe
-        recipe = await self.recipe_repo.get(id=recipe_id)
-        if not recipe or recipe.user_id != current_user.id:
+        # Fetch recipe with eager loading to avoid detached error
+        statement = select(Recipe).where(Recipe.id == recipe_id, Recipe.user_id == current_user.id).options(selectinload(Recipe.ingredient_links))
+        result = self.session.exec(statement).one_or_none()
+        if not result:
             return None
-        
-        # Manually load ingredient links if not automatically populated by SQLModel relationship
-        # (depends on session state and relationship configuration)
-        # This is often needed if the session that loaded `recipe` is closed or if lazy loading is not effective here.
-        links_statement = select(RecipeIngredientLink).where(RecipeIngredientLink.recipe_id == recipe.id)
-        recipe.ingredient_links = self.session.exec(links_statement).all()
-        return self.serialize_recipe(recipe)
+        return self.serialize_recipe(result)
 
     async def get_recipes_by_user(self, *, current_user: User, skip: int = 0, limit: int = 100) -> List[Recipe]:
         links_statement = (select(Recipe, RecipeIngredientLink)
@@ -144,18 +140,20 @@ class RecipeService:
         return self.serialize_recipe(db_recipe)
 
     async def delete_recipe(self, *, recipe_id: UUID, current_user: User) -> Optional[Recipe]:
-        db_recipe = await self.recipe_repo.get(id=recipe_id)
-        if not db_recipe or db_recipe.user_id != current_user.id:
-            return None
-        
-        # Delete associated RecipeIngredientLink entries first to avoid foreign key constraints
-        delete_links_statement = delete(RecipeIngredientLink).where(RecipeIngredientLink.recipe_id == recipe_id)
-        self.session.exec(delete_links_statement)
-        # self.session.commit() # Commit deletion of links
+        try:
+            db_recipe = await self.recipe_repo.get(id=recipe_id)
+            if not db_recipe or db_recipe.user_id != current_user.id:
+                return None
 
-        deleted_recipe = await self.recipe_repo.delete(id=recipe_id) # This will commit the recipe deletion
-        # The session commit within repo.delete() should handle it.
-        return self.serialize_recipe(deleted_recipe)
+            # Delete associated RecipeIngredientLink entries first to avoid foreign key constraints
+            delete_links_statement = delete(RecipeIngredientLink).where(RecipeIngredientLink.recipe_id == recipe_id)
+            self.session.exec(delete_links_statement)
+
+            deleted_recipe = await self.recipe_repo.delete(id=recipe_id) # This will commit the recipe deletion
+            return self.serialize_recipe(deleted_recipe)
+        finally:
+            # Ensure that the session is closed to release locks
+            self.session.close()
 
     async def update_recipe_cost_on_ingredient_change(self, ingredient_id: UUID):
         """    Find all recipes using this ingredient and update their costs.
