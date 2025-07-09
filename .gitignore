@@ -4,6 +4,7 @@
 # Environment files
 .env
 .venv
+*/.venv/
 
 # Node modules (if not directly listed in the project but often in subdirectories)
 node_modules/
