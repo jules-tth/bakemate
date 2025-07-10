@@ -1,6 +1,5 @@
 .PHONY: run install test help setup
 
-ENV = .env
 VENV_DIR = .venv
 PYTHON=${VENV_DIR}/bin/python
 export PYTHONPATH := .:$(PYTHONPATH)
@@ -21,7 +20,6 @@ help:
 # Setup the virtual environment and install requirements
 setup:
 	test -d $(VENV_DIR) || python3 -m venv $(VENV_DIR)
-	test -f $(ENV) && . $(ENV)
 	${PYTHON} -m pip install --quiet --upgrade pip
 	${PYTHON} -m pip install --quiet -r requirements.txt
 
