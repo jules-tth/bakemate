@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
+from pydantic import ConfigDict
 import uuid
 from .base import TenantBaseModel
 
@@ -22,11 +23,13 @@ class RecipeIngredientLink(TenantBaseModel, table=True):
 
 class Recipe(TenantBaseModel, table=True):
     # tenant_id: uuid.UUID = Field(foreign_key="tenant.id")
-    user_id: uuid.UUID = Field(foreign_key="user.id") # Owner of the recipe
+    user_id: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id", nullable=True)  # Owner of the recipe
 
     name: str = Field(index=True, nullable=False)
     description: Optional[str] = None
-    steps: str # Could be JSON or Markdown formatted text
+    steps: str = Field(alias="instructions")  # Could be JSON or Markdown formatted text
+    prep_time: Optional[int] = None
+    cook_time: Optional[int] = None
     yield_quantity: Optional[float] = None
     yield_unit: Optional[str] = None # e.g., cookies, loaves, servings
     calculated_cost: Optional[float] = Field(default=0) # Auto-updated based on ingredients
@@ -36,6 +39,22 @@ class Recipe(TenantBaseModel, table=True):
 
     # Relationship to Ingredients via the link table
     ingredient_links: List["RecipeIngredientLink"] = Relationship(back_populates="recipe")
+
+    @property
+    def instructions(self) -> str:
+        return self.steps
+
+    @instructions.setter
+    def instructions(self, value: str) -> None:
+        self.steps = value
+
+    @property
+    def total_time(self) -> Optional[int]:
+        if self.prep_time is None and self.cook_time is None:
+            return None
+        prep = self.prep_time or 0
+        cook = self.cook_time or 0
+        return prep + cook
 
 # Pydantic models for API requests/responses
 
@@ -55,7 +74,9 @@ class RecipeCreate(SQLModel):
     user_id: Optional[uuid.UUID] = None # Set internally
     name: str
     description: Optional[str] = None
-    steps: str
+    steps: str = Field(alias="instructions")
+    prep_time: Optional[int] = None
+    cook_time: Optional[int] = None
     yield_quantity: Optional[float] = None
     yield_unit: Optional[str] = None
     ingredients: List[RecipeIngredientLinkCreate] = []
@@ -66,6 +87,8 @@ class RecipeRead(SQLModel):
     name: str
     description: Optional[str]
     steps: str
+    prep_time: Optional[int]
+    cook_time: Optional[int]
     yield_quantity: Optional[float]
     yield_unit: Optional[str]
     calculated_cost: Optional[float]
@@ -73,19 +96,20 @@ class RecipeRead(SQLModel):
     created_at: str
     updated_at: str
 
-    class Config:
-	## TODO: fix 'orm_mode' has been renamed to 'from_attributes'
-        #orm_mode = True
-        arbitrary_types_allowed = True
-        json_encoders = {
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_encoders={
             uuid.UUID: lambda v: str(v),
             datetime: lambda v: v.isoformat(),
-        }
+        },
+    )
 
 class RecipeUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    steps: Optional[str] = None
+    steps: Optional[str] = Field(default=None, alias="instructions")
+    prep_time: Optional[int] = None
+    cook_time: Optional[int] = None
     yield_quantity: Optional[float] = None
     yield_unit: Optional[str] = None
     ingredients: Optional[List[RecipeIngredientLinkCreate]] = None # Allow updating ingredients

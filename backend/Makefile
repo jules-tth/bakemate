@@ -32,7 +32,7 @@ run: activate setup
 
 # Run tests
 test: activate setup
-	$(VENV_DIR)/bin/pytest -v --cov=app tests/
+	$(VENV_DIR)/bin/pytest -v --cov=app tests/$(filter-out $@,$(MAKECMDGOALS))
 
 # Clean build artifacts and temporary files
 clean:

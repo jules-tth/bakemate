@@ -5,6 +5,16 @@ from sqlmodel import Session, select, delete
 import uuid
 from sqlalchemy.orm import selectinload
 
+
+def calculate_recipe_cost(recipe_id: UUID, ingredients: List[dict], session: Session) -> float:
+    """Simple utility to calculate recipe cost used in unit tests."""
+    total_cost = 0.0
+    for ingredient in ingredients:
+        ing_obj = session.get(Ingredient, ingredient["id"])
+        if ing_obj:
+            total_cost += getattr(ing_obj, "unit_cost", 0) * ingredient.get("quantity", 0)
+    return total_cost
+
 from app.models.recipe import Recipe, RecipeCreate, RecipeUpdate, RecipeIngredientLink, RecipeIngredientLinkCreate
 from app.models.ingredient import Ingredient
 from app.models.user import User # For type hinting current_user
@@ -26,7 +36,7 @@ class RecipeService:
                 # It assumes the unit in RecipeIngredientLinkCreate matches the base unit cost of the Ingredient.
                 # A more robust system would handle unit conversions (e.g., ingredient cost is per kg, recipe uses grams).
                 # For now, direct multiplication.
-                total_cost += ingredient.cost * item_link.quantity
+                total_cost += ingredient.unit_cost * item_link.quantity
             else:
                 # Handle missing ingredient - maybe raise an error or skip
                 print(f"Warning: Ingredient with ID {item_link.ingredient_id} not found for cost calculation.")

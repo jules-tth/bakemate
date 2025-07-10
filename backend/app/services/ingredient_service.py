@@ -1,10 +1,27 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlmodel import Session, select
-
 from app.models.ingredient import Ingredient, IngredientCreate, IngredientUpdate
-from app.models.user import User # For type hinting current_user
-from app.repositories.sqlite_adapter import SQLiteRepository # Or a generic repository factory
+from app.models.user import User  # For type hinting current_user
+from app.repositories.sqlite_adapter import SQLiteRepository  # Or a generic repository factory
+
+
+def get_ingredient_by_id(ingredient_id: UUID, session: Session) -> Optional[Ingredient]:
+    """Utility used by unit tests to fetch an ingredient."""
+    return session.get(Ingredient, ingredient_id)
+
+
+def update_ingredient_stock(ingredient_id: UUID, quantity_change: float, session: Session) -> Optional[Ingredient]:
+    """Simple stock update helper for unit tests."""
+    ingredient = session.get(Ingredient, ingredient_id)
+    if not ingredient:
+        return None
+    current = getattr(ingredient, "stock_quantity", 0) or 0
+    ingredient.stock_quantity = current + quantity_change
+    session.add(ingredient)
+    session.commit()
+    session.refresh(ingredient)
+    return ingredient
 
 class IngredientService:
     def __init__(self, session: Session):
