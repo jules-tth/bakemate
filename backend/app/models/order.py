@@ -2,7 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from enum import Enum
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from .base import TenantBaseModel, generate_uuid
 
@@ -55,7 +55,7 @@ class Order(TenantBaseModel, table=True):
     status: OrderStatus = Field(default=OrderStatus.INQUIRY)
     payment_status: PaymentStatus = Field(default=PaymentStatus.UNPAID)
 
-    order_date: datetime = Field(default_factory=datetime.utcnow)
+    order_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: datetime
     delivery_method: Optional[str] = None # e.g., Pickup, Delivery
 
@@ -165,7 +165,7 @@ class Quote(TenantBaseModel, table=True):
 
     quote_number: str = Field(unique=True, index=True)
     status: QuoteStatus = Field(default=QuoteStatus.DRAFT)
-    quote_date: datetime = Field(default_factory=datetime.utcnow)
+    quote_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expiry_date: Optional[datetime] = None
     notes: Optional[str] = None
     subtotal: float = Field(default=0)
