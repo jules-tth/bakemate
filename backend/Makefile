@@ -34,6 +34,12 @@ run: activate setup
 test: activate setup
 	$(VENV_DIR)/bin/pytest -v --cov=app tests/$(filter-out $@,$(MAKECMDGOALS))
 
+# Allow additional arguments such as `make test unit` without requiring
+# explicit targets for them. The trailing rule consumes any unknown
+# target names so they can be passed through to pytest via MAKECMDGOALS.
+%:
+	@:
+
 # Clean build artifacts and temporary files
 clean:
 	@echo "Clean build virtual environment at $(VENV_DIR)"
