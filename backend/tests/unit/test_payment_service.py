@@ -32,7 +32,7 @@ def test_payment_calculation_deposit():
     
     # For deposit, expect 25% now, 75% on delivery
     assert payment_amount == pytest.approx(125.00, 0.01)
-    assert payment_date == delivery_date.date()
+    assert payment_date == delivery_date
 
 def test_payment_calculation_split():
     """Test split payment calculation."""
@@ -48,7 +48,7 @@ def test_payment_calculation_split():
     
     # For split payment, expect 50% now, 50% on delivery
     assert payment_amount == pytest.approx(250.00, 0.01)
-    assert payment_date == delivery_date.date()
+    assert payment_date == delivery_date
 
 def test_payment_calculation_invalid():
     """Test invalid payment schedule defaults to full payment."""

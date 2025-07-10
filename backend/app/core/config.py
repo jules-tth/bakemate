@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from dotenv import load_dotenv
 
 # Load .env file if it exists (for local development outside Docker)
@@ -47,8 +48,7 @@ class Settings(BaseSettings):
     # DEFAULT_USER_HOURLY_RATE: float = 25.0
     # DEFAULT_USER_OVERHEAD_PER_MONTH: float = 100.0
 
-    class Config:
-        case_sensitive = True
+    model_config = ConfigDict(case_sensitive=True)
         # If you have a .env file in the root of your project (alongside docker-compose.yml)
         # and want pydantic-settings to load it automatically when not in Docker, you can specify:
         # env_file = ".env"
