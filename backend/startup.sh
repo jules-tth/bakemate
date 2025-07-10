@@ -16,7 +16,7 @@ if [ ! -f "${APP_ENGINE}" ]; then
 	echo "App Engine: ${APP_ENGINE} missing, please run 'make setup' to setup python venv"
 	exit 1
 fi
-nohup ${VENV_DIR}/bin/uvicorn main:app --host 0.0.0.0 --port 8000 > "$LOG_FILE" 2>&1 &
+nohup ${APP_ENGINE} main:app --host 0.0.0.0 --port 8000 > "$LOG_FILE" 2>&1 &
 
 # Optionally store the PID so the service can be managed later.
 echo $! > "$LOG_DIR/backend.pid"
