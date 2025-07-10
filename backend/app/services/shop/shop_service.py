@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, select
 from fastapi import HTTPException, status
@@ -186,7 +186,7 @@ class ShopService:
             customer_email=order_in.customer_email,
             customer_phone=order_in.customer_phone,
             # order_date is set by default in Order model
-            due_date=datetime.utcnow().date() + timedelta(days=3), # Example: default due date 3 days from now
+            due_date=datetime.now(timezone.utc).date() + timedelta(days=3),  # Example: default due date 3 days from now
             total_amount=total_order_amount,
             status=AppOrderStatus.NEW_ONLINE, # Special status for shop orders
             notes=f"Order placed via online shop: {order_in.shop_slug}. Pickup: {order_in.pickup_time_slot if order_in.pickup_time_slot else 'N/A'}",

@@ -109,24 +109,32 @@ class TaskService:
         email_subject = f"Your BakeMate Weekly Digest: {start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}"
         
         html_content_parts = [f"<h1>Your BakeMate Weekly Digest</h1>"]
-        html_content_parts.append(f"<p>Here_s what_s on your plate for {start_of_week.strftime('%B %d, %Y')} - {end_of_week.strftime('%B %d, %Y')}:<\/p>")
+        html_content_parts.append(
+            f"<p>Here_s what_s on your plate for {start_of_week.strftime('%B %d, %Y')} - {end_of_week.strftime('%B %d, %Y')}:</p>"
+        )
 
         if upcoming_orders:
-            html_content_parts.append("<h2>Upcoming Orders:<\/h2><ul>")
+            html_content_parts.append("<h2>Upcoming Orders:</h2><ul>")
             for order in upcoming_orders:
-                html_content_parts.append(f"<li><strong>{order.order_number}<\/strong> - Due: {order.due_date.strftime('%a, %b %d, %I:%M %p')} - Status: {order.status.value}<\/li>")
-            html_content_parts.append("<\/ul>")
+                html_content_parts.append(
+                    f"<li><strong>{order.order_number}</strong> - Due: {order.due_date.strftime('%a, %b %d, %I:%M %p')} - Status: {order.status.value}</li>"
+                )
+            html_content_parts.append("</ul>")
         else:
-            html_content_parts.append("<p>No upcoming orders this week.<\/p>")
+            html_content_parts.append("<p>No upcoming orders this week.</p>")
 
         if upcoming_tasks:
-            html_content_parts.append("<h2>Upcoming Tasks:<\/h2><ul>")
+            html_content_parts.append("<h2>Upcoming Tasks:</h2><ul>")
             for task in upcoming_tasks:
-                due_str = task.due_date.strftime('%a, %b %d, %I:%M %p') if task.due_date else "N\/A"
-                html_content_parts.append(f"<li><strong>{task.title}<\/strong> - Due: {due_str} - Priority: {task.priority} - Status: {task.status.value}<\/li>")
-            html_content_parts.append("<\/ul>")
+                due_str = (
+                    task.due_date.strftime('%a, %b %d, %I:%M %p') if task.due_date else "N/A"
+                )
+                html_content_parts.append(
+                    f"<li><strong>{task.title}</strong> - Due: {due_str} - Priority: {task.priority} - Status: {task.status.value}</li>"
+                )
+            html_content_parts.append("</ul>")
         else:
-            html_content_parts.append("<p>No upcoming tasks this week.<\/p>")
+            html_content_parts.append("<p>No upcoming tasks this week.</p>")
         
         html_content = "".join(html_content_parts)
 

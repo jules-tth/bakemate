@@ -96,13 +96,12 @@ class RecipeRead(SQLModel):
     created_at: str
     updated_at: str
 
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        json_encoders={
-            uuid.UUID: lambda v: str(v),
-            datetime: lambda v: v.isoformat(),
-        },
-    )
+    # Pydantic v2 handles ``uuid.UUID`` and ``datetime`` types natively so
+    # custom JSON encoders are no longer required. Using ``json_encoders``
+    # also triggers a deprecation warning in Pydantic 2.x.  The built-in
+    # serializers already produce ISO formatted datetimes and strings for
+    # UUIDs, so the explicit configuration has been removed.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 class RecipeUpdate(SQLModel):
     name: Optional[str] = None

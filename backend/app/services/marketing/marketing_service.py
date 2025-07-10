@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
@@ -43,7 +43,7 @@ class MarketingService:
 
         elif segment_type == MarketingSegment.DORMANT_CUSTOMERS:
             # Define "Dormant Customers": e.g., made an order but not in the last 6 months.
-            six_months_ago = datetime.utcnow() - timedelta(days=180)
+            six_months_ago = datetime.now(timezone.utc) - timedelta(days=180)
             
             # Find emails of customers who have ordered at any time
             all_ordering_customers_stmt = select(Order.customer_email.distinct()).where(Order.user_id == current_user.id)

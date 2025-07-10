@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 def generate_uuid():
@@ -8,8 +8,12 @@ def generate_uuid():
 
 class BaseUUIDModel(SQLModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, sa_column_kwargs={"onupdate": datetime.utcnow})
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)},
+    )
 
 class TenantBaseModel(BaseUUIDModel):
     # All models that are tenant-specific should inherit from this
