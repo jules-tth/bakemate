@@ -14,7 +14,7 @@ from collections import deque
 import itertools
 
 # Configuration
-LOG_FILE = "app_files/logs/run.log"
+LOG_FILE = "app_files/logs/backend.log"
 ERROR_PATTERNS = [
     r"Traceback",
     r"ERROR",
