@@ -6,20 +6,21 @@ Handles payment calculations and scheduling.
 
 from datetime import datetime, timedelta
 
+
 def calculate_scheduled_payment(order_total, payment_schedule, delivery_date):
     """
     Calculate payment amount and date based on payment schedule.
-    
+
     Args:
         order_total: Total order amount
         payment_schedule: Payment schedule type ('full', 'deposit', 'split')
         delivery_date: Date of delivery
-        
+
     Returns:
         tuple: (payment_amount, payment_date)
     """
     today = datetime.now().date()
-    
+
     if payment_schedule == "full":
         # Full payment due now
         return order_total, today

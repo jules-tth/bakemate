@@ -9,18 +9,23 @@ from dotenv import load_dotenv
 # without modifying the Docker environment directly.
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
+
 class Settings(BaseSettings):
     # API settings
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "BakeMate"
 
     # APP_FILES_DIR: str = os.getenv("APP_FILES_DIR", "/app/app_files") # For Docker
-    APP_FILES_DIR: str = os.getenv("APP_FILES_DIR", "./app_files") # For local development
+    APP_FILES_DIR: str = os.getenv(
+        "APP_FILES_DIR", "./app_files"
+    )  # For local development
 
     # Database
     # The DATABASE_URL will be taken from the environment variable set in docker-compose.yml
     # For local development without Docker, it can fall back to a default or be set in a .env file.
-    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{APP_FILES_DIR}/bakemate_dev.db")
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL", f"sqlite:///{APP_FILES_DIR}/bakemate_dev.db"
+    )
 
     # Airtable - ensure these are set in your environment (e.g., .env file or Docker env)
     AIRTABLE_BASE_ID: str = os.getenv("AIRTABLE_BASE_ID", "YOUR_AIRTABLE_BASE_ID_HERE")
@@ -35,10 +40,14 @@ class Settings(BaseSettings):
     # EMAIL_TEMPLATES_DIR: str = "/app/app/email-templates/build"
 
     # JWT Authentication
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "a_super_secret_key_for_jwt_please_change_this")
+    JWT_SECRET_KEY: str = os.getenv(
+        "JWT_SECRET_KEY", "a_super_secret_key_for_jwt_please_change_this"
+    )
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     # Access token lifetime in minutes
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")) # e.g., 60 minutes
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    )  # e.g., 60 minutes
     # SECURE_COOKIE_NAME: str = "bakemate_auth"
 
     # CORS (Cross-Origin Resource Sharing)
@@ -49,10 +58,10 @@ class Settings(BaseSettings):
     # DEFAULT_USER_OVERHEAD_PER_MONTH: float = 100.0
 
     model_config = ConfigDict(case_sensitive=True)
-        # If you have a .env file in the root of your project (alongside docker-compose.yml)
-        # and want pydantic-settings to load it automatically when not in Docker, you can specify:
-        # env_file = ".env"
-        # env_file_encoding = "utf-8"
+    # If you have a .env file in the root of your project (alongside docker-compose.yml)
+    # and want pydantic-settings to load it automatically when not in Docker, you can specify:
+    # env_file = ".env"
+    # env_file_encoding = "utf-8"
+
 
 settings = Settings()
-

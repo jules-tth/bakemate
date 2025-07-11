@@ -1,4 +1,4 @@
-.PHONY: run install test help setup
+.PHONY: run install test help setup lint
 
 VENV_DIR = .venv
 PYTHON=${VENV_DIR}/bin/python
@@ -10,6 +10,7 @@ help:
 	@echo
 	@echo "  setup           Setup the virtual environment and install dependencies."
 	@echo "  test <unittest> Run tests."
+	@echo "  lint            Run linter black on codebase"
 	@echo "  run             Run the software."
 	@echo "  clean           Remove build artifacts and temporary files."
 	@echo "  environment     Print out the current environment."
@@ -44,4 +45,8 @@ test: activate setup
 clean:
 	@echo "Clean build virtual environment at $(VENV_DIR)"
 	test -d $(VENV_DIR) && rm -rf $(VENV_DIR)/
+
+# Run lint using black library
+lint: setup
+	$(VENV_DIR)/bin/black app/ tests/ tools/ scripts/
 

@@ -5,10 +5,12 @@ import uuid
 from sqlalchemy import Column, JSON
 from datetime import datetime
 
+
 class ShopStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     MAINTENANCE = "maintenance"
+
 
 class ShopProduct(SQLModel):
     recipe_id: uuid.UUID
@@ -18,11 +20,16 @@ class ShopProduct(SQLModel):
     image_url: Optional[str] = None
     is_available: bool = True
 
+
 class ShopConfiguration(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(default=None, index=True, nullable=False)
 
-    shop_slug: str = Field(unique=True, index=True, description="Unique URL-friendly slug for the shop page, e.g., /shop/{slug}")
+    shop_slug: str = Field(
+        unique=True,
+        index=True,
+        description="Unique URL-friendly slug for the shop page, e.g., /shop/{slug}",
+    )
     shop_name: Optional[str] = None
     description: Optional[str] = None
     contact_email: Optional[str] = None
@@ -33,10 +40,14 @@ class ShopConfiguration(SQLModel, table=True):
     allow_online_orders: bool = Field(default=False)
     min_order_amount: Optional[float] = None
     max_order_amount: Optional[float] = None
-    delivery_options: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    delivery_options: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSON)
+    )
 
     # Refactor this to be a Dict ensuring compatibility with JSON storage
-    products_json: Dict[str, List[Dict[str, Any]]] = Field(default_factory=lambda: {"items": []}, sa_column=Column(JSON, name="products"))
+    products_json: Dict[str, List[Dict[str, Any]]] = Field(
+        default_factory=lambda: {"items": []}, sa_column=Column(JSON, name="products")
+    )
 
     @property
     def products(self) -> List[ShopProduct]:
@@ -44,6 +55,7 @@ class ShopConfiguration(SQLModel, table=True):
 
     def set_products(self, products: List[ShopProduct]):
         self.products_json["items"] = [p.dict() for p in products]
+
 
 class ShopConfigurationBase(SQLModel):
     shop_slug: str
@@ -61,8 +73,10 @@ class ShopConfigurationBase(SQLModel):
     payment_methods_accepted: Optional[List[str]] = ["stripe"]
     products: Optional[List[ShopProduct]] = []
 
+
 class ShopConfigurationCreate(ShopConfigurationBase):
     user_id: uuid.UUID
+
 
 class ShopConfigurationUpdate(SQLModel):
     shop_slug: Optional[str] = None
@@ -80,11 +94,13 @@ class ShopConfigurationUpdate(SQLModel):
     payment_methods_accepted: Optional[List[str]] = None
     products: Optional[List[ShopProduct]] = None
 
+
 class ShopConfigurationRead(ShopConfigurationBase):
     id: uuid.UUID
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
 
 # Implementing PublicShopView and associated models
 class PublicShopProductView(SQLModel):
@@ -93,6 +109,7 @@ class PublicShopProductView(SQLModel):
     price: float
     description: Optional[str] = None
     image_url: Optional[str] = None
+
 
 class PublicShopView(SQLModel):
     shop_name: Optional[str] = None
@@ -105,10 +122,12 @@ class PublicShopView(SQLModel):
     delivery_options: Optional[Dict[str, Any]] = None
     min_order_amount: Optional[float] = None
 
+
 # Implementing ShopOrderCreate and associated model
 class ShopOrderItemCreate(SQLModel):
     recipe_id: uuid.UUID
     quantity: int = Field(gt=0)
+
 
 class ShopOrderCreate(SQLModel):
     customer_name: str
