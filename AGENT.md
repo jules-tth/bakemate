@@ -53,6 +53,12 @@ python tools/log_watcher.py
 ```
 To monitor the progress and errors for the backend, please use log_watcher.py
 
+## Backend api endpoint
+- /health [health endpoint returns 200 and correct status.]
+- /api/v1/openapi.json [OpenAPI endpoint returns 200 and valid schema.]
+
+Use the openapi.json to understand the schema for the running instance of the backend.  You can query the endpoint when the app is running and to understand the use-case.
+
 ## Commit Guidelines
 
 - Use short, descriptive commit messages (e.g. `Add inventory API` or `Fix order tests`).
