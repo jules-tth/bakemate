@@ -13,12 +13,15 @@ warnings.filterwarnings(
     module=r"passlib.*",
 )
 
+
 @pytest.fixture
 async def async_client():
     """Create an async client for testing."""
     from main import app
+
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
+
 
 @pytest.fixture
 def db_rollback():

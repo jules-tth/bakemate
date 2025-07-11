@@ -4,11 +4,13 @@ from main import app
 
 client = TestClient(app)
 
+
 def test_health_endpoint():
     """Test the health endpoint returns 200 and correct status."""
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
 
 def test_openapi_endpoint():
     """Test the OpenAPI endpoint returns 200 and valid schema."""

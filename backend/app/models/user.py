@@ -4,6 +4,7 @@ from pydantic import EmailStr
 import uuid
 from .base import BaseUUIDModel
 
+
 class User(BaseUUIDModel, table=True):
     email: EmailStr = Field(unique=True, index=True, nullable=False)
     hashed_password: str = Field(nullable=False)
@@ -20,9 +21,11 @@ class User(BaseUUIDModel, table=True):
     # recipes: List["Recipe"] = Relationship(back_populates="owner")
     # orders: List["Order"] = Relationship(back_populates="owner")
 
+
 class UserCreate(SQLModel):
     email: EmailStr
     password: str
+
 
 class UserRead(SQLModel):
     id: uuid.UUID
@@ -30,9 +33,9 @@ class UserRead(SQLModel):
     is_active: bool
     is_superuser: bool
 
+
 class UserUpdate(SQLModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
     is_superuser: Optional[bool] = None
-

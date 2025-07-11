@@ -6,35 +6,48 @@ from pydantic import BaseModel, ValidationError
 
 from app.core.config import settings
 
+
 class TokenPayload(BaseModel):
-    sub: Optional[Any] = None # Subject (usually user ID or email)
+    sub: Optional[Any] = None  # Subject (usually user ID or email)
     exp: Optional[datetime] = None
     # Add any other custom claims you need
     # e.g., tenant_id: Optional[str] = None
+
 
 def create_access_token(subject: Any, expires_delta: Optional[timedelta] = None) -> str:
     """Creates a new JWT access token."""
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+
     to_encode = TokenPayload(sub=str(subject), exp=expire).model_dump()
-    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+    )
     return encoded_jwt
+
 
 def decode_access_token(token: str) -> Optional[TokenPayload]:
     """Decodes a JWT access token and returns its payload."""
     try:
-        payload_dict = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload_dict = jwt.decode(
+            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        )
         # Manually add timezone info if exp is a naive datetime from jwt.decode
         if "exp" in payload_dict and isinstance(payload_dict["exp"], int):
-             payload_dict["exp"] = datetime.fromtimestamp(payload_dict["exp"], tz=timezone.utc)
+            payload_dict["exp"] = datetime.fromtimestamp(
+                payload_dict["exp"], tz=timezone.utc
+            )
         elif "exp" in payload_dict and isinstance(payload_dict["exp"], float):
-             payload_dict["exp"] = datetime.fromtimestamp(payload_dict["exp"], tz=timezone.utc)
-        
+            payload_dict["exp"] = datetime.fromtimestamp(
+                payload_dict["exp"], tz=timezone.utc
+            )
+
         token_payload = TokenPayload(**payload_dict)
-        
+
         # Check if token has expired
         if token_payload.exp and token_payload.exp < datetime.now(timezone.utc):
             # print("Token has expired") # Or raise an exception
@@ -49,6 +62,7 @@ def decode_access_token(token: str) -> Optional[TokenPayload]:
     except ValidationError as e:
         # print(f"Token payload validation error: {e}")
         return None
+
 
 # Example usage (for testing this file directly):
 # if __name__ == "__main__":
@@ -77,4 +91,3 @@ def decode_access_token(token: str) -> Optional[TokenPayload]:
 #         print(f"Decoded Expired Payload: {payload_expired}")
 #     else:
 #         print("Correctly identified expired token as invalid.")
-

@@ -8,13 +8,15 @@ from .base import TenantBaseModel, generate_uuid
 
 if TYPE_CHECKING:
     from .user import User
-    from .order import Order # For linking tasks or calendar events to orders
+    from .order import Order  # For linking tasks or calendar events to orders
+
 
 class CalendarEventType(str, Enum):
     ORDER_DUE_DATE = "order_due_date"
     TASK_DEADLINE = "task_deadline"
     PERSONAL_EVENT = "personal_event"
     REMINDER = "reminder"
+
 
 class CalendarEvent(TenantBaseModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id")
@@ -26,24 +28,32 @@ class CalendarEvent(TenantBaseModel, table=True):
     is_all_day: bool = Field(default=False)
 
     event_type: CalendarEventType = Field(default=CalendarEventType.PERSONAL_EVENT)
-    color: Optional[str] = None # e.g., hex color for display
+    color: Optional[str] = None  # e.g., hex color for display
 
     # For linking to other entities
     order_id: Optional[uuid.UUID] = Field(default=None, foreign_key="order.id")
-    task_id: Optional[uuid.UUID] = Field(default=None, foreign_key="task.id") # If tasks have their own table
+    task_id: Optional[uuid.UUID] = Field(
+        default=None, foreign_key="task.id"
+    )  # If tasks have their own table
 
     # For Google Calendar Sync
-    google_calendar_id: Optional[str] = Field(default=None, index=True) # ID of the event in Google Calendar
-    google_event_id: Optional[str] = Field(default=None, index=True) # ID of this specific event instance in Google Calendar
+    google_calendar_id: Optional[str] = Field(
+        default=None, index=True
+    )  # ID of the event in Google Calendar
+    google_event_id: Optional[str] = Field(
+        default=None, index=True
+    )  # ID of this specific event instance in Google Calendar
 
     # order: Optional["Order"] = Relationship()
     # task: Optional["Task"] = Relationship() # If Task is a separate model
+
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     DEFERRED = "deferred"
+
 
 class Task(TenantBaseModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id")
@@ -52,16 +62,20 @@ class Task(TenantBaseModel, table=True):
     description: Optional[str] = None
     status: TaskStatus = Field(default=TaskStatus.PENDING)
     due_date: Optional[datetime] = None
-    priority: int = Field(default=0) # e.g., 0=Low, 1=Medium, 2=High
+    priority: int = Field(default=0)  # e.g., 0=Low, 1=Medium, 2=High
 
-    order_id: Optional[uuid.UUID] = Field(default=None, foreign_key="order.id") # Optional link to an order
+    order_id: Optional[uuid.UUID] = Field(
+        default=None, foreign_key="order.id"
+    )  # Optional link to an order
     # order: Optional["Order"] = Relationship()
 
     # For linking to a calendar event if a task has a specific calendar entry
     # calendar_event_id: Optional[uuid.UUID] = Field(default=None, foreign_key="calendarevent.id")
     # calendar_event: Optional["CalendarEvent"] = Relationship(back_populates="task_origin")
 
+
 # --- Pydantic Models for API --- #
+
 
 # Calendar Event API Models
 class CalendarEventBase(SQLModel):
@@ -75,8 +89,10 @@ class CalendarEventBase(SQLModel):
     order_id: Optional[uuid.UUID] = None
     task_id: Optional[uuid.UUID] = None
 
+
 class CalendarEventCreate(CalendarEventBase):
     user_id: uuid.UUID
+
 
 class CalendarEventRead(CalendarEventBase):
     id: uuid.UUID
@@ -85,6 +101,7 @@ class CalendarEventRead(CalendarEventBase):
     updated_at: datetime
     google_calendar_id: Optional[str] = None
     google_event_id: Optional[str] = None
+
 
 class CalendarEventUpdate(SQLModel):
     title: Optional[str] = None
@@ -96,8 +113,9 @@ class CalendarEventUpdate(SQLModel):
     color: Optional[str] = None
     order_id: Optional[uuid.UUID] = None
     task_id: Optional[uuid.UUID] = None
-    google_calendar_id: Optional[str] = None # Allow updating these if sync changes
+    google_calendar_id: Optional[str] = None  # Allow updating these if sync changes
     google_event_id: Optional[str] = None
+
 
 # Task API Models
 class TaskBase(SQLModel):
@@ -108,14 +126,17 @@ class TaskBase(SQLModel):
     priority: Optional[int] = 0
     order_id: Optional[uuid.UUID] = None
 
+
 class TaskCreate(TaskBase):
     user_id: uuid.UUID
+
 
 class TaskRead(TaskBase):
     id: uuid.UUID
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
 
 class TaskUpdate(SQLModel):
     title: Optional[str] = None
@@ -124,4 +145,3 @@ class TaskUpdate(SQLModel):
     due_date: Optional[datetime] = None
     priority: Optional[int] = None
     order_id: Optional[uuid.UUID] = None
-

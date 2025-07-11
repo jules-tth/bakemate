@@ -4,15 +4,20 @@ from uuid import UUID
 
 from app.repositories.sqlite_adapter import get_session
 from app.services.pricing_service import PricingService
-from app.models.pricing_config import PricingConfiguration, PricingConfigurationRead, PricingConfigurationUpdate
+from app.models.pricing_config import (
+    PricingConfiguration,
+    PricingConfigurationRead,
+    PricingConfigurationUpdate,
+)
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
 
 router = APIRouter()
 
+
 @router.get("/configuration", response_model=PricingConfigurationRead)
 async def get_pricing_configuration(
-    *, 
+    *,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -33,14 +38,18 @@ async def get_pricing_configuration(
         # Modifying service `get_pricing_configuration` or `create_or_update` to handle this.
         # For now, let the service handle creation if it doesn_t exist upon an update/create call.
         # If just GETTING and it_s not there, it means user hasn_t set it up.
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pricing configuration not found. Please create one.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pricing configuration not found. Please create one.",
+        )
     return config
+
 
 @router.post("/configuration", response_model=PricingConfigurationRead)
 async def create_or_update_pricing_configuration(
-    *, 
+    *,
     session: Session = Depends(get_session),
-    config_in: PricingConfigurationUpdate, # Use Update schema as it allows partial updates / initial creation
+    config_in: PricingConfigurationUpdate,  # Use Update schema as it allows partial updates / initial creation
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -48,8 +57,11 @@ async def create_or_update_pricing_configuration(
     """
     pricing_service = PricingService(session=session)
     # The service method `create_or_update_pricing_configuration` handles both cases.
-    config = await pricing_service.create_or_update_pricing_configuration(config_in=config_in, current_user=current_user)
+    config = await pricing_service.create_or_update_pricing_configuration(
+        config_in=config_in, current_user=current_user
+    )
     return config
+
 
 # Placeholder for an endpoint that uses the pricing engine
 # @router.get("/calculate/recipe/{recipe_id}", response_model=float) # Or a more complex PriceBreakdown model
@@ -64,4 +76,3 @@ async def create_or_update_pricing_configuration(
 #     if price is None:
 #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Could not calculate price. Recipe or configuration missing.")
 #     return price
-

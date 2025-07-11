@@ -11,4 +11,3 @@
 # from .api.v1.api import api_router
 
 VERSION = "0.1.0"
-

@@ -5,14 +5,19 @@ from sqlmodel import Session, select
 
 from app.models.user import User, UserCreate
 from app.auth.security import get_password_hash, verify_password
-from app.repositories.sqlite_adapter import SQLiteRepository # Or a generic repository factory
+from app.repositories.sqlite_adapter import (
+    SQLiteRepository,
+)  # Or a generic repository factory
+
 
 class UserService:
     def __init__(self, session: Session):
         # In a more complex setup, you might inject a repository factory
         # or specific repositories. For now, directly using SQLiteRepository.
-        self.user_repo = SQLiteRepository(model=User) # type: ignore
-        self.session = session # Pass session to repo methods if they don_t manage their own
+        self.user_repo = SQLiteRepository(model=User)  # type: ignore
+        self.session = (
+            session  # Pass session to repo methods if they don_t manage their own
+        )
 
     async def get_user_by_email(self, email: str) -> Optional[User]:
         # The SQLiteRepository get_by_attribute expects the session to be handled internally
@@ -32,7 +37,7 @@ class UserService:
         # Create a dictionary for user creation, excluding the plain password
         user_data = user_create.model_dump(exclude={"password"})
         db_user = User(**user_data, hashed_password=hashed_password)
-        
+
         self.session.add(db_user)
         self.session.commit()
         self.session.refresh(db_user)
@@ -51,17 +56,18 @@ class UserService:
         # This would use SendGrid client to send an email with a verification link
         # Link would be something like: https://yourdomain.com/verify-email?token=<token>
         # The token would be a short-lived JWT or a one-time use token stored in DB
-        print(f"Simulating sending verification email to {email_to} for user {user_id} with token {token}")
+        print(
+            f"Simulating sending verification email to {email_to} for user {user_id} with token {token}"
+        )
         # In a real app: call SendGrid service here
         pass
 
     async def verify_user_email(self, user_id: UUID) -> Optional[User]:
         user = await self.get_user_by_id(user_id=user_id)
-        if user and not user.is_active: # Or a specific `is_verified` field
-            user.is_active = True # Activate user upon email verification
+        if user and not user.is_active:  # Or a specific `is_verified` field
+            user.is_active = True  # Activate user upon email verification
             self.session.add(user)
             self.session.commit()
             self.session.refresh(user)
             return user
         return None
-

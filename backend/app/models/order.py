@@ -8,8 +8,10 @@ from .base import TenantBaseModel, generate_uuid
 
 if TYPE_CHECKING:
     from .user import User, UserRead
-    from .recipe import Recipe, RecipeRead # For linking order items to recipes
+    from .recipe import Recipe, RecipeRead  # For linking order items to recipes
+
     # from .contact import Contact, ContactRead # For linking to a customer
+
 
 class OrderStatus(str, Enum):
     INQUIRY = "inquiry"
@@ -19,7 +21,8 @@ class OrderStatus(str, Enum):
     READY_FOR_PICKUP = "ready_for_pickup"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
-    NEW_ONLINE = "new-online" # For differentiator A
+    NEW_ONLINE = "new-online"  # For differentiator A
+
 
 class PaymentStatus(str, Enum):
     UNPAID = "unpaid"
@@ -27,37 +30,42 @@ class PaymentStatus(str, Enum):
     PAID_IN_FULL = "paid_in_full"
     REFUNDED = "refunded"
 
+
 # This could represent an item within an order or a quote
 class ItemBase(SQLModel):
     # recipe_id: Optional[uuid.UUID] = Field(default=None, foreign_key="recipe.id") # If it_s a standard recipe item
-    name: str # Name of the item (e.g., "Custom Birthday Cake", or Recipe Name)
+    name: str  # Name of the item (e.g., "Custom Birthday Cake", or Recipe Name)
     description: Optional[str] = None
     quantity: int
-    unit_price: float # Price for one unit of this item
+    unit_price: float  # Price for one unit of this item
+
 
 class OrderItem(TenantBaseModel, table=True):
     id: uuid.UUID = Field(default_factory=generate_uuid, primary_key=True, index=True)
     order_id: uuid.UUID = Field(foreign_key="order.id")
-    name: str 
+    name: str
     description: Optional[str] = None
     quantity: int
-    unit_price: float 
-    total_price: float # quantity * unit_price
+    unit_price: float
+    total_price: float  # quantity * unit_price
 
     # recipe: Optional["Recipe"] = Relationship()
     order: "Order" = Relationship(back_populates="items")
 
+
 class Order(TenantBaseModel, table=True):
-    user_id: uuid.UUID = Field(foreign_key="user.id") # The baker/user who owns this order
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id"
+    )  # The baker/user who owns this order
     # customer_id: Optional[uuid.UUID] = Field(default=None, foreign_key="contact.id") # Link to CRM
 
-    order_number: str = Field(unique=True, index=True) # Human-readable order number
+    order_number: str = Field(unique=True, index=True)  # Human-readable order number
     status: OrderStatus = Field(default=OrderStatus.INQUIRY)
     payment_status: PaymentStatus = Field(default=PaymentStatus.UNPAID)
 
     order_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: datetime
-    delivery_method: Optional[str] = None # e.g., Pickup, Delivery
+    delivery_method: Optional[str] = None  # e.g., Pickup, Delivery
 
     subtotal: float = Field(default=0)
     tax: float = Field(default=0)
@@ -77,19 +85,25 @@ class Order(TenantBaseModel, table=True):
     # Relationships
     # user: "User" = Relationship(back_populates="orders")
     # customer: Optional["Contact"] = Relationship()
-    items: List["OrderItem"] = Relationship(back_populates="order", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    items: List["OrderItem"] = Relationship(
+        back_populates="order", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
     # attached_files: List["OrderAttachment"] = Relationship(back_populates="order")
 
+
 # --- Pydantic Models for API --- #
+
 
 class OrderItemCreate(ItemBase):
     # recipe_id: Optional[uuid.UUID] = None
     pass
 
+
 class OrderItemRead(ItemBase):
-    id: uuid.UUID 
+    id: uuid.UUID
     total_price: float
     # recipe: Optional[RecipeRead] = None
+
 
 class OrderBase(SQLModel):
     # customer_id: Optional[uuid.UUID] = None
@@ -101,10 +115,12 @@ class OrderBase(SQLModel):
     deposit_due_date: Optional[date] = None
     balance_due_date: Optional[date] = None
 
+
 class OrderCreate(OrderBase):
     user_id: uuid.UUID
     items: List[OrderItemCreate] = []
     status: Optional[OrderStatus] = OrderStatus.INQUIRY
+
 
 class OrderRead(OrderBase):
     id: uuid.UUID
@@ -123,6 +139,7 @@ class OrderRead(OrderBase):
     updated_at: datetime
     stripe_payment_intent_id: Optional[str] = None
 
+
 class OrderUpdate(SQLModel):
     # customer_id: Optional[uuid.UUID] = None
     due_date: Optional[datetime] = None
@@ -131,12 +148,13 @@ class OrderUpdate(SQLModel):
     payment_status: Optional[PaymentStatus] = None
     notes_to_customer: Optional[str] = None
     internal_notes: Optional[str] = None
-    items: Optional[List[OrderItemCreate]] = None # Allow updating items
+    items: Optional[List[OrderItemCreate]] = None  # Allow updating items
     deposit_amount: Optional[float] = None
     deposit_due_date: Optional[date] = None
     balance_due_date: Optional[date] = None
     stripe_payment_intent_id: Optional[str] = None
     stripe_checkout_session_id: Optional[str] = None
+
 
 # --- Quote Models --- #
 class QuoteStatus(str, Enum):
@@ -145,6 +163,7 @@ class QuoteStatus(str, Enum):
     ACCEPTED = "accepted"
     DECLINED = "declined"
     EXPIRED = "expired"
+
 
 class QuoteItem(TenantBaseModel, table=True):
     id: uuid.UUID = Field(default_factory=generate_uuid, primary_key=True, index=True)
@@ -159,6 +178,7 @@ class QuoteItem(TenantBaseModel, table=True):
     # recipe: Optional["Recipe"] = Relationship()
     quote: "Quote" = Relationship(back_populates="items")
 
+
 class Quote(TenantBaseModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id")
     # customer_id: Optional[uuid.UUID] = Field(default=None, foreign_key="contact.id")
@@ -169,35 +189,45 @@ class Quote(TenantBaseModel, table=True):
     expiry_date: Optional[datetime] = None
     notes: Optional[str] = None
     subtotal: float = Field(default=0)
-    tax: float = Field(default=0) # Or link to a tax rate model
+    tax: float = Field(default=0)  # Or link to a tax rate model
     total_amount: float = Field(default=0)
 
     # user: "User" = Relationship(back_populates="quotes")
     # customer: Optional["Contact"] = Relationship()
-    items: List["QuoteItem"] = Relationship(back_populates="quote", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-    converted_to_order_id: Optional[uuid.UUID] = Field(default=None, foreign_key="order.id")
+    items: List["QuoteItem"] = Relationship(
+        back_populates="quote", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    converted_to_order_id: Optional[uuid.UUID] = Field(
+        default=None, foreign_key="order.id"
+    )
     # converted_order: Optional["Order"] = Relationship()
 
+
 # --- Pydantic Models for Quote API --- #
+
 
 class QuoteItemCreate(ItemBase):
     # recipe_id: Optional[uuid.UUID] = None
     pass
+
 
 class QuoteItemRead(ItemBase):
     id: uuid.UUID
     total_price: float
     # recipe: Optional[RecipeRead] = None
 
+
 class QuoteBase(SQLModel):
     # customer_id: Optional[uuid.UUID] = None
     expiry_date: Optional[datetime] = None
     notes: Optional[str] = None
 
+
 class QuoteCreate(QuoteBase):
     user_id: uuid.UUID
     items: List[QuoteItemCreate] = []
     status: Optional[QuoteStatus] = QuoteStatus.DRAFT
+
 
 class QuoteRead(QuoteBase):
     id: uuid.UUID
@@ -213,10 +243,10 @@ class QuoteRead(QuoteBase):
     updated_at: datetime
     converted_to_order_id: Optional[uuid.UUID] = None
 
+
 class QuoteUpdate(SQLModel):
     # customer_id: Optional[uuid.UUID] = None
     expiry_date: Optional[datetime] = None
     notes: Optional[str] = None
     status: Optional[QuoteStatus] = None
     items: Optional[List[QuoteItemCreate]] = None
-

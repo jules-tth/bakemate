@@ -8,16 +8,21 @@ from datetime import date
 from .base import TenantBaseModel
 
 if TYPE_CHECKING:
-    from .order import Order # For linking orders to a contact
+    from .order import Order  # For linking orders to a contact
+
     # from .user import User # A contact is usually associated with a user/bakery
+
 
 class ContactType(str, Enum):
     CUSTOMER = "customer"
     SUPPLIER = "supplier"
     OTHER = "other"
 
+
 class Contact(TenantBaseModel, table=True):
-    user_id: uuid.UUID = Field(foreign_key="user.id") # The baker/user who owns this contact
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id"
+    )  # The baker/user who owns this contact
 
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -35,13 +40,15 @@ class Contact(TenantBaseModel, table=True):
     notes: Optional[str] = None
 
     # For CRM features like birthday reminders
-    birthday: Optional[date] = None # YYYY-MM-DD
+    birthday: Optional[date] = None  # YYYY-MM-DD
     # anniversary: Optional[date] = None # Could be another special date
 
     # Relationships
     # orders: List["Order"] = Relationship(back_populates="customer")
 
+
 # --- Pydantic Models for API --- #
+
 
 class ContactBase(SQLModel):
     first_name: Optional[str] = None
@@ -59,14 +66,17 @@ class ContactBase(SQLModel):
     notes: Optional[str] = None
     birthday: Optional[date] = None
 
+
 class ContactCreate(ContactBase):
-    user_id: uuid.UUID # Must be provided
+    user_id: uuid.UUID  # Must be provided
+
 
 class ContactRead(ContactBase):
     id: uuid.UUID
     user_id: uuid.UUID
-    created_at: str # datetime converted to str
-    updated_at: str # datetime converted to str
+    created_at: str  # datetime converted to str
+    updated_at: str  # datetime converted to str
+
 
 class ContactUpdate(SQLModel):
     first_name: Optional[str] = None
@@ -83,4 +93,3 @@ class ContactUpdate(SQLModel):
     contact_type: Optional[ContactType] = None
     notes: Optional[str] = None
     birthday: Optional[date] = None
-
