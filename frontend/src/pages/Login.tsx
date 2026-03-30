@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import apiClient from '../api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -12,11 +11,24 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await apiClient.post('/auth/token', {
-        username: email,
-        password,
+      const formData = new URLSearchParams();
+      formData.set('username', email);
+      formData.set('password', password);
+
+      const response = await fetch('/api/v1/auth/login/access-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
       });
-      login(response.data.access_token);
+
+      if (!response.ok) {
+        throw new Error(`Login failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      login(data.access_token);
       navigate('/');
     } catch (error) {
       console.error(error);

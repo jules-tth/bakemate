@@ -4,12 +4,13 @@ from sqlmodel import SQLModel
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.api.v1.api import api_router as api_v1_router
-from app.repositories.sqlite_adapter import engine
+from app.repositories.sqlite_adapter import engine, ensure_sqlite_order_schema
 from app.models import __all__ as all_models
 from seed import seed_data
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
+    ensure_sqlite_order_schema(engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

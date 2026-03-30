@@ -8,7 +8,7 @@ from fastapi import (
     Header,
     Response,
 )
-from typing import List, Optional
+from typing import Annotated, List, Optional
 from uuid import UUID
 
 from sqlmodel import Session
@@ -17,7 +17,11 @@ import stripe  # For webhook verification if not done by a library
 from app.repositories.sqlite_adapter import get_session
 from app.services.order_service import OrderService, QuoteService
 from app.models.order import (
+    DayRunningQueueSummary,
+    ImportedOrderQueueSummary,
+    ImportedOrderReviewReason,
     Order,
+    OrderDayRunningTriageFilter,
     OrderCreate,
     OrderRead,
     OrderUpdate,
@@ -61,13 +65,70 @@ async def read_orders(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     status_filter: Optional[OrderStatus] = Query(None, alias="status"),
+    imported_only: Annotated[bool, Query()] = False,
+    search: Annotated[Optional[str], Query()] = None,
+    needs_review: Annotated[Optional[bool], Query()] = None,
+    review_reason: Annotated[Optional[ImportedOrderReviewReason], Query()] = None,
+    day_running: Annotated[Optional[OrderDayRunningTriageFilter], Query()] = None,
+    action_class: Annotated[Optional[str], Query()] = None,
+    urgency: Annotated[Optional[str], Query()] = None,
     current_user: User = Depends(get_current_active_user),
 ):
     order_service = OrderService(session=session)
     orders = await order_service.get_orders_by_user(
-        current_user=current_user, skip=skip, limit=limit, status=status_filter
+        current_user=current_user,
+        skip=skip,
+        limit=limit,
+        status=status_filter,
+        imported_only=imported_only,
+        search=search,
+        needs_review=needs_review,
+        review_reason=review_reason,
+        day_running=day_running,
+        action_class=action_class,
+        urgency=urgency,
     )
     return orders
+
+
+@router.get("/day-running/summary", response_model=DayRunningQueueSummary)
+async def read_day_running_queue_summary(
+    *,
+    session: Session = Depends(get_session),
+    status_filter: Optional[OrderStatus] = Query(None, alias="status"),
+    imported_only: Annotated[bool, Query()] = False,
+    search: Annotated[Optional[str], Query()] = None,
+    needs_review: Annotated[Optional[bool], Query()] = None,
+    review_reason: Annotated[Optional[ImportedOrderReviewReason], Query()] = None,
+    action_class: Annotated[Optional[str], Query()] = None,
+    urgency: Annotated[Optional[str], Query()] = None,
+    current_user: User = Depends(get_current_active_user),
+):
+    order_service = OrderService(session=session)
+    return await order_service.get_day_running_queue_summary(
+        current_user=current_user,
+        status=status_filter,
+        imported_only=imported_only,
+        search=search,
+        needs_review=needs_review,
+        review_reason=review_reason,
+        action_class=action_class,
+        urgency=urgency,
+    )
+
+
+@router.get("/imported/summary", response_model=ImportedOrderQueueSummary)
+async def read_imported_order_summary(
+    *,
+    session: Session = Depends(get_session),
+    search: Annotated[Optional[str], Query()] = None,
+    current_user: User = Depends(get_current_active_user),
+):
+    order_service = OrderService(session=session)
+    return await order_service.get_imported_order_queue_summary(
+        current_user=current_user,
+        search=search,
+    )
 
 
 @router.get("/{order_id}", response_model=OrderRead)

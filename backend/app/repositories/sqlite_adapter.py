@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
+from sqlalchemy import inspect, text
 from sqlmodel import SQLModel, Session, create_engine, select
 
 from app.core.config import (
@@ -25,8 +26,45 @@ engine = create_engine(
     ),
 )
 
+_schema_ensured = False
+
+
+def ensure_sqlite_order_schema(target_engine=None) -> None:
+    global _schema_ensured
+
+    engine_to_use = target_engine or engine
+    if "sqlite" not in str(engine_to_use.url):
+        _schema_ensured = True
+        return
+    if target_engine is None and _schema_ensured:
+        return
+
+    inspector = inspect(engine_to_use)
+    if "order" not in inspector.get_table_names():
+        if target_engine is None:
+            _schema_ensured = True
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("order")}
+    required_columns = {
+        "deposit_due_date": "TEXT",
+        "balance_due_date": "TEXT",
+        "stripe_checkout_session_id": "VARCHAR",
+    }
+
+    with engine_to_use.begin() as connection:
+        for column_name, column_type in required_columns.items():
+            if column_name not in existing_columns:
+                connection.execute(
+                    text(f'ALTER TABLE "order" ADD COLUMN {column_name} {column_type}')
+                )
+
+    if target_engine is None:
+        _schema_ensured = True
+
 
 def get_session():
+    ensure_sqlite_order_schema()
     with Session(engine) as session:
         yield session
 

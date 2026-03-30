@@ -44,7 +44,7 @@ async def seed_data():
 
         for recipe_data in recipes_data:
             recipe_in = RecipeCreate(**recipe_data)
-            session.add(Recipe(**recipe_in.model_dump()))
+            session.add(Recipe(**recipe_in.model_dump(by_alias=False)))
 
         session.commit()
         print("Database seeded with a user and recipes.")

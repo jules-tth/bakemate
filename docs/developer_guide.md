@@ -73,7 +73,9 @@ The project is organized as a monorepo with distinct frontend and backend direct
 
 ## 5. Setting Up a Development Environment (Using Docker Compose)
 
-This is the recommended method for local development as it mirrors the production setup closely.
+This is the **required default** method for BakeMate development. Future implementation work should assume the app is running inside Docker Compose, and the dev environment should stay up while work is being performed unless a rebuild/restart is required.
+
+Before assigning or changing host ports for BakeMate, read `/home/jules/.openclaw/workspace/PORTS.md` and run `/home/jules/.openclaw/workspace/scripts/check-port.sh <port>`.
 
 ### 5.1. Environment Variables
 
@@ -109,7 +111,7 @@ This is the recommended method for local development as it mirrors the productio
 From the project root directory (`/home/ubuntu/bakemate`):
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 This command will:
@@ -118,9 +120,12 @@ This command will:
 
 ### 5.3. Accessing the Application
 
--   **Frontend Application:** `http://localhost` (or the port mapped to Nginx, typically 80 or 8080 as per `docker-compose.yml`).
--   **Backend API:** Requests to `http://localhost/api/v1/` will be proxied by Nginx to the backend service.
--   **Backend API Docs (Swagger UI):** `http://localhost:8000/docs` (accessing the backend service directly on its exposed port).
+-   **Frontend/Application via Nginx:** `http://localhost:8301/`
+-   **Backend API via Nginx:** requests to `http://localhost:8301/api/v1/` will be proxied by Nginx to the backend service.
+-   **Backend API Docs (Swagger UI):** `http://localhost:8300/docs`
+-   **Backend Health:** `http://localhost:8300/health`
+
+For this host, the LAN URL is currently `http://192.168.86.24:8301/`.
 
 ### 5.4. Making Code Changes
 

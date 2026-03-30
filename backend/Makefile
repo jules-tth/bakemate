@@ -2,7 +2,6 @@
 
 VENV_DIR = .venv
 PYTHON=${VENV_DIR}/bin/python
-export PYTHONPATH := .:$(PYTHONPATH)
 
 # Help target to display available commands with descriptions
 help:
