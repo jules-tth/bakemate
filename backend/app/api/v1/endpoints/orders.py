@@ -13,6 +13,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 import stripe  # For webhook verification if not done by a library
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from app.repositories.sqlite_adapter import get_session
 from app.services.order_service import OrderService, QuoteService
@@ -38,6 +39,33 @@ from app.auth.dependencies import get_current_active_user
 from app.core.config import settings
 
 router = APIRouter()
+
+
+def _raise_local_dev_readiness_error(exc: Exception) -> None:
+    detail = str(exc)
+    if "no such column" not in detail.lower():
+        raise exc
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={
+            "code": "local_dev_schema_stale",
+            "message": "Local dev data needs a schema refresh before Ops Home can load live queue data.",
+            "title": "Local dev setup needs refresh",
+            "note": "This is a local BakeMate setup issue, not a bakery workflow status.",
+            "action": "Refresh or reseed the local dev database, then reload /ops.",
+            "recovery_command_label": "Run locally from the BakeMate repo",
+            "recovery_command": "docker compose up --build -d",
+            "guidance_title": "How to recover locally",
+            "guidance_source": "README.md and docs/developer_guide.md",
+            "guidance_steps": [
+                "Use the normal BakeMate local setup flow from README.md or docs/developer_guide.md to refresh the local dev environment.",
+                "If your local BakeMate database was recreated, repopulate it using your usual local seed path before reloading /ops.",
+                "Reload /ops after the local dev database is refreshed.",
+            ],
+            "raw_error": detail,
+        },
+    )
 
 # --- Order Endpoints --- #
 
@@ -75,19 +103,22 @@ async def read_orders(
     current_user: User = Depends(get_current_active_user),
 ):
     order_service = OrderService(session=session)
-    orders = await order_service.get_orders_by_user(
-        current_user=current_user,
-        skip=skip,
-        limit=limit,
-        status=status_filter,
-        imported_only=imported_only,
-        search=search,
-        needs_review=needs_review,
-        review_reason=review_reason,
-        day_running=day_running,
-        action_class=action_class,
-        urgency=urgency,
-    )
+    try:
+        orders = await order_service.get_orders_by_user(
+            current_user=current_user,
+            skip=skip,
+            limit=limit,
+            status=status_filter,
+            imported_only=imported_only,
+            search=search,
+            needs_review=needs_review,
+            review_reason=review_reason,
+            day_running=day_running,
+            action_class=action_class,
+            urgency=urgency,
+        )
+    except (OperationalError, ProgrammingError) as exc:
+        _raise_local_dev_readiness_error(exc)
     return orders
 
 
@@ -105,16 +136,19 @@ async def read_day_running_queue_summary(
     current_user: User = Depends(get_current_active_user),
 ):
     order_service = OrderService(session=session)
-    return await order_service.get_day_running_queue_summary(
-        current_user=current_user,
-        status=status_filter,
-        imported_only=imported_only,
-        search=search,
-        needs_review=needs_review,
-        review_reason=review_reason,
-        action_class=action_class,
-        urgency=urgency,
-    )
+    try:
+        return await order_service.get_day_running_queue_summary(
+            current_user=current_user,
+            status=status_filter,
+            imported_only=imported_only,
+            search=search,
+            needs_review=needs_review,
+            review_reason=review_reason,
+            action_class=action_class,
+            urgency=urgency,
+        )
+    except (OperationalError, ProgrammingError) as exc:
+        _raise_local_dev_readiness_error(exc)
 
 
 @router.get("/imported/summary", response_model=ImportedOrderQueueSummary)

@@ -80,6 +80,7 @@ def test_review_focus_summary_surfaces_operator_at_a_glance_context(monkeypatch)
     assert order.review_focus_summary.payment_confidence == "Payment follow-up still risky — 384.00 remains open and dated money is overdue."
     assert order.review_focus_summary.invoice_confidence == "Invoice basics are complete."
     assert order.review_focus_summary.handoff_confidence == "Handoff basics are present, but timing should still be rechecked before release."
+    assert order.review_focus_summary.payment_trust_preview is None
     assert order.review_focus_summary.missing_basics == ["Payment follow-up is still blocking confidence."]
     assert order.review_focus_summary.risk_note == "Deposit is overdue. A large unpaid balance is still open."
     assert order.review_focus_summary.next_step == "Collect overdue deposit"
@@ -128,6 +129,7 @@ def test_review_focus_summary_calls_out_missing_cross_cutting_basics(monkeypatch
     assert order.review_focus_summary.payment_confidence == "Payment looks settled."
     assert order.review_focus_summary.invoice_confidence == "Invoice still needs attention: line items"
     assert order.review_focus_summary.handoff_confidence == "Confirm whether this order is pickup or delivery."
+    assert order.review_focus_summary.payment_trust_preview is None
     assert order.review_focus_summary.missing_basics == [
         "Add at least one customer contact method.",
         "Add line items so the order contents are clear.",
@@ -135,4 +137,4 @@ def test_review_focus_summary_calls_out_missing_cross_cutting_basics(monkeypatch
         "Invoice basics are incomplete for this order.",
     ]
     assert order.review_focus_summary.risk_note == "Add at least one customer contact method."
-    assert order.review_focus_summary.next_step == "Complete invoice details"
+    assert order.review_focus_summary.next_step == "Complete invoice basics"

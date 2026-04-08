@@ -9,6 +9,7 @@ import Ingredients from './pages/Ingredients';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import ImportedRecords from './pages/ImportedRecords';
+import OpsHome from './pages/OpsHome';
 
 export default function App() {
   return (
@@ -21,10 +22,11 @@ export default function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="recipes" element={<Recipes />} />
               <Route path="ingredients" element={<Ingredients />} />
+              <Route path="ops" element={<OpsHome />} />
               <Route path="orders" element={<Orders />} />
               <Route path="orders/imported" element={<ImportedRecords />} />
               <Route path="orders/:orderId" element={<OrderDetail />} />
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<Navigate to="/ops" replace />} />
             </Route>
           </Route>
         </Routes>

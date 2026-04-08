@@ -205,6 +205,11 @@ class OrderPaymentFocusSummary(SQLModel):
     risk_note: str
     next_step: str
     next_step_detail: str
+    trust_state: str = "current"
+    trust_label: str = "Current BakeMate payment context"
+    trust_note: str = "Payment status comes from current BakeMate order data."
+    historical_payment_label: Optional[str] = None
+    historical_payment_note: Optional[str] = None
 
 
 class OrderHandoffFocusSummary(SQLModel):
@@ -232,6 +237,7 @@ class OrderReviewFocusSummary(SQLModel):
     payment_confidence: str
     invoice_confidence: str
     handoff_confidence: str
+    payment_trust_preview: Optional[str] = None
     missing_basics: List[str] = []
     risk_note: str
     next_step: str
@@ -265,6 +271,7 @@ class OrderDayRunningFocusSummary(SQLModel):
     primary_blocker_label: str
     queue_reason_preview: Optional[str] = None
     queue_next_step_preview: Optional[str] = None
+    queue_payment_trust_preview: Optional[str] = None
     queue_contact_preview: Optional[str] = None
     queue_payment_preview: Optional[str] = None
     queue_handoff_preview: Optional[str] = None

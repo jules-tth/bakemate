@@ -582,6 +582,11 @@ export default function Orders() {
                                   ) : null}
                                 </>
                               ) : null}
+                              {order.day_running_focus_summary.queue_payment_trust_preview ? (
+                                <div className="mt-2 text-xs font-medium text-sky-700">
+                                  {order.day_running_focus_summary.queue_payment_trust_preview}
+                                </div>
+                              ) : null}
                             </div>
                             <div className="text-right text-xs text-slate-600 max-w-[220px]">
                               {order.day_running_focus_summary.primary_blocker_label}

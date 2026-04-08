@@ -61,6 +61,8 @@ def test_payment_focus_summary_prioritizes_overdue_deposit_context(monkeypatch):
     assert "Deposit is overdue." in order.payment_focus_summary.risk_note
     assert order.payment_focus_summary.next_step == "Collect overdue deposit"
     assert "Deposit due Mar 13, 2026" in order.payment_focus_summary.next_step_detail
+    assert order.payment_focus_summary.trust_state == "current"
+    assert order.payment_focus_summary.trust_label == "Current BakeMate payment context"
 
 
 def test_payment_focus_summary_shows_final_balance_after_deposit_is_paid(monkeypatch):

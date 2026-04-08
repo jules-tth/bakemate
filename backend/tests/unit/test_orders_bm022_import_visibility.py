@@ -530,6 +530,150 @@ def test_read_order_endpoint_returns_recent_customer_history_for_same_contact():
     assert payload.legacy_status_raw == "2.0"
 
 
+def test_read_orders_exposes_queue_payment_trust_cue_only_for_imported_legacy_limited_orders():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        current_user = User(
+            id=uuid4(),
+            email="bm062-queue@example.com",
+            hashed_password="not-used",
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(current_user)
+        session.add(
+            Order(
+                user_id=current_user.id,
+                customer_name="Imported Queue Trust",
+                order_number="LEG-QUEUE-1",
+                status=OrderStatus.CONFIRMED,
+                payment_status=PaymentStatus.UNPAID,
+                order_date=datetime(2026, 3, 7, 12, 0, tzinfo=timezone.utc),
+                due_date=datetime(2026, 3, 25, 12, 0, tzinfo=timezone.utc),
+                total_amount=150.0,
+                subtotal=150.0,
+                balance_due=150.0,
+                internal_notes=(
+                    "Legacy OrderStatusId: 2.0\n"
+                    "Legacy legacy_status_raw: 2.0\n"
+                    "Legacy bakemate_status: confirmed\n"
+                    "Legacy AmountPaid: 0"
+                ),
+            )
+        )
+        session.add(
+            Order(
+                user_id=current_user.id,
+                customer_name="Native Queue Trust",
+                order_number="ORD-QUEUE-1",
+                status=OrderStatus.CONFIRMED,
+                payment_status=PaymentStatus.UNPAID,
+                order_date=datetime(2026, 3, 8, 12, 0, tzinfo=timezone.utc),
+                due_date=datetime(2026, 3, 26, 12, 0, tzinfo=timezone.utc),
+                total_amount=90.0,
+                subtotal=90.0,
+                balance_due=90.0,
+                internal_notes="Created in BakeMate",
+            )
+        )
+        session.commit()
+
+        payload = asyncio.run(
+            read_orders(
+                session=session,
+                skip=0,
+                limit=100,
+                status_filter=None,
+                imported_only=None,
+                search=None,
+                needs_review=None,
+                review_reason=None,
+                current_user=current_user,
+            )
+        )
+
+    imported = next(order for order in payload if order.order_number == "LEG-QUEUE-1")
+    native = next(order for order in payload if order.order_number == "ORD-QUEUE-1")
+
+    assert imported.payment_focus_summary.trust_state == "legacy_limited"
+    assert imported.payment_focus_summary.historical_payment_label == "Historical payment: unknown"
+    assert "Legacy payment history may be incomplete" in imported.payment_focus_summary.historical_payment_note
+    assert imported.review_focus_summary.payment_trust_preview == "Payment trust: legacy-limited"
+    assert imported.day_running_focus_summary.queue_payment_trust_preview == "Payment trust: legacy-limited"
+    assert native.payment_focus_summary.trust_state == "current"
+    assert native.payment_focus_summary.historical_payment_label is None
+    assert native.payment_focus_summary.historical_payment_note is None
+    assert native.review_focus_summary.payment_trust_preview is None
+    assert native.day_running_focus_summary.queue_payment_trust_preview is None
+
+
+def test_imported_order_payment_focus_marks_legacy_limited_trust_boundary():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        current_user = User(
+            id=uuid4(),
+            email="bm061-imported@example.com",
+            hashed_password="not-used",
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(current_user)
+        session.add(
+            Order(
+                user_id=current_user.id,
+                customer_name="Imported Payment Trust",
+                customer_email="imported-payment@example.com",
+                order_number="LEG-PAY-1",
+                status=OrderStatus.CONFIRMED,
+                payment_status=PaymentStatus.UNPAID,
+                order_date=datetime(2026, 3, 7, 12, 0, tzinfo=timezone.utc),
+                due_date=datetime(2026, 3, 25, 12, 0, tzinfo=timezone.utc),
+                total_amount=150.0,
+                subtotal=150.0,
+                balance_due=150.0,
+                internal_notes=(
+                    "Legacy OrderStatusId: 2.0\n"
+                    "Legacy legacy_status_raw: 2.0\n"
+                    "Legacy bakemate_status: confirmed\n"
+                    "Legacy AmountPaid: 0"
+                ),
+            )
+        )
+        session.commit()
+        imported_order = session.exec(select(Order)).first()
+        assert imported_order is not None
+
+        payload = asyncio.run(
+            read_order(
+                session=session,
+                order_id=imported_order.id,
+                current_user=current_user,
+            )
+        )
+
+    assert payload is not None
+    assert payload.is_imported is True
+    assert payload.payment_focus_summary.trust_state == "legacy_limited"
+    assert payload.payment_focus_summary.trust_label == "Imported payment history is legacy-limited"
+    assert "conservative payment snapshot" in payload.payment_focus_summary.trust_note
+    assert payload.payment_focus_summary.historical_payment_label == "Historical payment: unknown"
+    assert "Use a second source" in payload.payment_focus_summary.historical_payment_note
+    assert payload.review_focus_summary.payment_trust_preview == "Payment trust: legacy-limited"
+    assert payload.day_running_focus_summary.queue_payment_trust_preview == "Payment trust: legacy-limited"
+
+
 def test_native_order_read_stays_safe_when_no_legacy_metadata_exists():
     engine = create_engine(
         "sqlite://",
@@ -582,3 +726,8 @@ def test_native_order_read_stays_safe_when_no_legacy_metadata_exists():
     assert payload.primary_review_reason is None
     assert payload.review_next_check is None
     assert payload.recent_customer_orders == []
+    assert payload.payment_focus_summary.trust_state == "current"
+    assert payload.payment_focus_summary.historical_payment_label is None
+    assert payload.payment_focus_summary.historical_payment_note is None
+    assert payload.review_focus_summary.payment_trust_preview is None
+    assert payload.day_running_focus_summary.queue_payment_trust_preview is None

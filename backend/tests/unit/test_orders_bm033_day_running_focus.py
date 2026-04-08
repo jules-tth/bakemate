@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from uuid import uuid4
 
 import app.services.order_service as order_service_module
-from app.models.order import OrderCreate, OrderDayRunningFocusSummary, OrderItemCreate, OrderReviewFocusSummary, OrderStatus, OrderUpdate, PaymentStatus
+from app.models.order import OrderCreate, OrderDayRunningFocusSummary, OrderItemCreate, OrderPaymentFocusSummary, OrderReviewFocusSummary, OrderStatus, OrderUpdate, PaymentStatus
 from app.models.user import User
 from app.services.order_service import OrderService
 from sqlalchemy.pool import StaticPool
@@ -130,7 +130,7 @@ def test_bm033_day_running_focus_names_attention_preview(monkeypatch):
         "Deposit is still open (25.00) before handoff."
     )
     assert order.day_running_focus_summary.queue_reason_preview == (
-        "Attention: Deposit still open"
+        "Attention: Deposit due"
     )
     assert order.day_running_focus_summary.queue_next_step_preview == "Next: review deposit"
     assert order.day_running_focus_summary.queue_contact_preview == "Contact: call 555-111-3333"
@@ -299,7 +299,7 @@ def test_bm033_day_running_focus_previews_production_clue_when_next_step_is_prod
 
     assert order.day_running_focus_summary.readiness_label == "Needs attention today"
     assert order.day_running_focus_summary.primary_blocker_category == "production"
-    assert order.day_running_focus_summary.queue_next_step_preview == "Next: clarify bake details"
+    assert order.day_running_focus_summary.queue_next_step_preview == "Next: clarify production basics"
     assert order.day_running_focus_summary.queue_production_preview == "Production: flavor needs confirmation"
     assert order.production_focus_summary.readiness_label == "Needs clarification"
     assert order.production_focus_summary.attention_note == (
@@ -413,7 +413,7 @@ def test_bm042_day_running_focus_previews_invoice_clue_for_invoice_exception(mon
 
     assert order.day_running_focus_summary.readiness_label == "Blocked for today"
     assert order.day_running_focus_summary.primary_blocker_category == "invoice"
-    assert order.day_running_focus_summary.queue_reason_preview == "Blocked: Invoice details missing"
+    assert order.day_running_focus_summary.queue_reason_preview == "Blocked: Invoice basics missing"
     assert order.day_running_focus_summary.queue_next_step_preview == "Next: finish invoice"
     assert order.day_running_focus_summary.queue_invoice_preview == "Invoice: item totals need review"
     assert order.day_running_focus_summary.queue_payment_preview is None
@@ -464,7 +464,7 @@ def test_bm045_queue_next_step_preview_uses_consistent_action_shape_for_similar_
         assert service._build_queue_next_step_preview(
             next_step="Review final balance collection",
             reason_summary="Final balance is still open for today's handoff (140.00).",
-        ) == "Next: review balance collection"
+        ) == "Next: review final balance"
         assert service._build_queue_next_step_preview(
             next_step="Confirm delivery release details",
             reason_summary="Add the delivery destination before this order leaves the kitchen.",
@@ -488,11 +488,11 @@ def test_bm047_queue_reason_preview_names_targets_in_generic_fallback_cases():
         assert service._build_queue_reason_preview(
             readiness_label="Blocked for today",
             reason_summary="production basics missing",
-        ) == "Blocked: Bake details missing"
+        ) == "Blocked: Production basics missing"
         assert service._build_queue_reason_preview(
             readiness_label="Needs attention today",
             reason_summary="production details need clarification",
-        ) == "Attention: Bake details need clarification"
+        ) == "Attention: Production basics need clarification"
         assert service._build_queue_reason_preview(
             readiness_label="Blocked for today",
             reason_summary="contact basics missing",
@@ -507,7 +507,7 @@ def test_bm047_queue_reason_preview_names_targets_in_generic_fallback_cases():
         ) == "Blocked: Handoff method not confirmed"
 
 
-def test_bm048_queue_next_step_preview_uses_matching_bake_target_terms_for_production_exceptions():
+def test_bm048_queue_next_step_preview_uses_matching_production_basics_terms_for_production_exceptions():
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -520,11 +520,171 @@ def test_bm048_queue_next_step_preview_uses_matching_bake_target_terms_for_produ
         assert service._build_queue_next_step_preview(
             next_step="Lock the missing production basics",
             reason_summary="production basics missing",
-        ) == "Next: lock bake details"
+        ) == "Next: lock production basics"
         assert service._build_queue_next_step_preview(
             next_step="Confirm production details",
             reason_summary="production details need clarification",
-        ) == "Next: clarify bake details"
+        ) == "Next: clarify production basics"
+
+
+def test_bm055_queue_payment_preview_uses_compact_payment_family_terms():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        service = OrderService(session=session)
+        assert service._build_queue_reason_preview(
+            readiness_label="Needs attention today",
+            reason_summary="Deposit is still open (25.00) before handoff.",
+        ) == "Attention: Deposit due"
+        assert service._build_queue_reason_preview(
+            readiness_label="Needs attention today",
+            reason_summary="Final balance is still open for today's handoff (140.00).",
+        ) == "Attention: Final balance due"
+        assert service._build_queue_next_step_preview(
+            next_step="Review final balance collection",
+            reason_summary="Final balance is still open for today's handoff (140.00).",
+        ) == "Next: review final balance"
+        assert service._build_queue_next_step_preview(
+            next_step="Collect the overdue balance",
+            reason_summary="Final balance is overdue for today's work (140.00 open).",
+        ) == "Next: collect final balance"
+
+
+def test_bm057_queue_payment_amount_preview_uses_final_balance_wording():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        service = OrderService(session=session)
+        assert service._build_day_running_payment_preview(
+            readiness_label="Needs attention today",
+            primary_category="payment",
+            next_step="Review final balance collection",
+            payment_focus_summary=OrderPaymentFocusSummary(
+                amount_owed_now=140.0,
+                payment_state="Waiting on final balance",
+                collection_stage="balance",
+                deposit_status="Deposit paid",
+                balance_status="Final balance due",
+                due_timing="Next payment checkpoint: final balance on Mar 19, 2026.",
+                risk_note="Final balance still open.",
+                next_step="Collect final balance",
+                next_step_detail="Collect the remaining final balance before handoff.",
+            ),
+        ) == "Collect: $140.00 final balance"
+        assert service._build_day_running_payment_preview(
+            readiness_label="Needs attention today",
+            primary_category="payment",
+            next_step="Review deposit follow-up",
+            payment_focus_summary=OrderPaymentFocusSummary(
+                amount_owed_now=25.0,
+                payment_state="Waiting on deposit",
+                collection_stage="deposit",
+                deposit_status="Deposit due",
+                balance_status="Balance pending",
+                due_timing="Next payment checkpoint: deposit on Mar 19, 2026.",
+                risk_note="Deposit still open.",
+                next_step="Collect deposit",
+                next_step_detail="Collect the deposit before prep starts.",
+            ),
+        ) == "Collect: $25.00 deposit"
+
+
+def test_bm058_queue_payment_amount_preview_uses_compact_fallback_terms():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        service = OrderService(session=session)
+        assert service._build_day_running_payment_preview(
+            readiness_label="Needs attention today",
+            primary_category="payment",
+            next_step="Review final balance collection",
+            payment_focus_summary=OrderPaymentFocusSummary(
+                amount_owed_now=0.0,
+                payment_state="Paid in full",
+                collection_stage="settled",
+                deposit_status="Deposit collected",
+                balance_status="No balance remaining",
+                due_timing="No money is due right now.",
+                risk_note="No payment-specific risk flags right now.",
+                next_step="Share or archive the invoice record",
+                next_step_detail="The invoice is ready from the current order details and no money is still open.",
+            ),
+        ) == "Paid in full"
+        assert service._build_day_running_payment_preview(
+            readiness_label="Needs attention today",
+            primary_category="payment",
+            next_step="Review final balance collection",
+            payment_focus_summary=OrderPaymentFocusSummary(
+                amount_owed_now=80.0,
+                payment_state="Payment review needed",
+                collection_stage="review",
+                deposit_status="No deposit required",
+                balance_status="Final balance outstanding: $80.00 with no due date",
+                due_timing="Order is due today.",
+                risk_note="No payment-specific risk flags right now.",
+                next_step="Review final balance collection",
+                next_step_detail="Double-check the remaining amount before handoff.",
+            ),
+        ) == "Final balance review needed"
+        assert service._build_day_running_payment_preview(
+            readiness_label="Needs attention today",
+            primary_category="payment",
+            next_step="Review deposit follow-up",
+            payment_focus_summary=OrderPaymentFocusSummary(
+                amount_owed_now=20.0,
+                payment_state="Payment review needed",
+                collection_stage="review",
+                deposit_status="Deposit outstanding: $20.00 with no due date",
+                balance_status="Balance pending",
+                due_timing="Order is due today.",
+                risk_note="No payment-specific risk flags right now.",
+                next_step="Review deposit follow-up",
+                next_step_detail="Double-check the deposit amount before prep starts.",
+            ),
+        ) == "Deposit review needed"
+
+
+def test_bm056_queue_payment_preview_uses_compact_overdue_payment_terms():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        service = OrderService(session=session)
+        assert service._build_queue_reason_preview(
+            readiness_label="Needs attention today",
+            reason_summary="Deposit is still unpaid for today's work (25.00 open).",
+        ) == "Attention: Overdue deposit"
+        assert service._build_queue_reason_preview(
+            readiness_label="Needs attention today",
+            reason_summary="Final balance is overdue for today's work (140.00 open).",
+        ) == "Attention: Overdue final balance"
+        assert service._build_queue_next_step_preview(
+            next_step="Collect the overdue deposit",
+            reason_summary="Deposit is still unpaid for today's work (25.00 open).",
+        ) == "Next: collect deposit"
+        assert service._build_queue_next_step_preview(
+            next_step="Collect the overdue balance",
+            reason_summary="Final balance is overdue for today's work (140.00 open).",
+        ) == "Next: collect final balance"
 
 
 def test_bm033_day_running_focus_previews_final_balance_when_collection_is_current(monkeypatch):
@@ -587,8 +747,8 @@ def test_bm033_day_running_focus_previews_final_balance_when_collection_is_curre
 
     assert order is not None
     assert order.day_running_focus_summary.primary_blocker_category == "payment"
-    assert order.day_running_focus_summary.queue_next_step_preview == "Next: collect balance"
-    assert order.day_running_focus_summary.queue_payment_preview == "Collect: $140.00 balance"
+    assert order.day_running_focus_summary.queue_next_step_preview == "Next: collect final balance"
+    assert order.day_running_focus_summary.queue_payment_preview == "Collect: $140.00 final balance"
     assert order.day_running_focus_summary.queue_handoff_preview is None
 
 

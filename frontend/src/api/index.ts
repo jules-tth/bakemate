@@ -111,6 +111,11 @@ export interface OrderRecord {
     risk_note: string;
     next_step: string;
     next_step_detail: string;
+    trust_state: string;
+    trust_label: string;
+    trust_note: string;
+    historical_payment_label?: string | null;
+    historical_payment_note?: string | null;
   };
   handoff_focus_summary: {
     handoff_time_label: string;
@@ -136,6 +141,7 @@ export interface OrderRecord {
     payment_confidence: string;
     invoice_confidence: string;
     handoff_confidence: string;
+    payment_trust_preview?: string | null;
     missing_basics: string[];
     risk_note: string;
     next_step: string;
@@ -166,6 +172,7 @@ export interface OrderRecord {
     primary_blocker_label: string;
     queue_reason_preview?: string | null;
     queue_next_step_preview?: string | null;
+    queue_payment_trust_preview?: string | null;
     queue_contact_preview?: string | null;
     queue_payment_preview?: string | null;
     queue_handoff_preview?: string | null;
