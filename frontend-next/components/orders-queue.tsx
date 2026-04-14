@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { AuthRequiredCard } from '@/components/auth-required-card';
 import { readStoredToken } from '@/lib/auth';
 import { fetchOrdersQueue, type QueueOrder } from '@/lib/orders';
 import {
@@ -50,6 +51,15 @@ export function OrdersQueue() {
 
   const sortedOrders = useMemo(() => getSortedOrdersQueue(orders), [orders]);
   const currentAppOrderBase = getCurrentFrontendHref('/orders');
+
+  if (error === 'Missing auth token') {
+    return (
+      <AuthRequiredCard
+        nextPath="/orders"
+        detail="Sign in first to open the Next queue preview, then drill into order detail from the authenticated queue path."
+      />
+    );
+  }
 
   return (
     <div className="stack ops-layout">

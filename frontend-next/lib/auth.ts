@@ -12,6 +12,16 @@ export function buildLoginRequestBody(username: string, password: string) {
   return params.toString();
 }
 
+export function buildLoginHref(nextPath = '/ops') {
+  const params = new URLSearchParams();
+  params.set('next', nextPath);
+  return `/login?${params.toString()}`;
+}
+
+export function isMissingAuthTokenError(error: unknown) {
+  return error instanceof Error && error.message === 'Missing auth token';
+}
+
 export type LoginResponse = {
   access_token: string;
   token_type: string;

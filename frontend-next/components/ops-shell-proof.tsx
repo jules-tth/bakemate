@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { AuthRequiredCard } from '@/components/auth-required-card';
 import { readStoredToken } from '@/lib/auth';
 import { fetchDayRunningSummary, fetchOpsPreviewOrders, type DayRunningSummary, type OpsPreviewOrder } from '@/lib/ops';
 import {
@@ -106,6 +107,15 @@ export function OpsShellProof() {
     [topOrders],
   );
   const importedReviewHref = getCurrentFrontendHref('/orders/imported');
+
+  if (error === 'Missing auth token') {
+    return (
+      <AuthRequiredCard
+        nextPath="/ops"
+        detail="Sign in first to open the accepted Next /ops preview, then continue into the queue and order detail path."
+      />
+    );
+  }
 
   return (
     <div className="stack ops-layout">

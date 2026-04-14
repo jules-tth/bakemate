@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { AuthRequiredCard } from '@/components/auth-required-card';
 import { fetchOrderDetail, type OrderDetailRecord } from '@/lib/orders';
 import { getHandoffContactLines, getHandoffDestinationSummary, getHandoffMethodTone } from '@/lib/handoff-panel';
 import { describeImportReviewReason, getImportedReviewReasons, getImportedReviewSummary } from '@/lib/imported-review-panel';
@@ -36,6 +37,17 @@ export function OrderDetailEntry({ orderId }: { orderId: string }) {
     return (
       <main className="shell">
         <section className="card muted">Loading authenticated order detail…</section>
+      </main>
+    );
+  }
+
+  if (error === 'Missing auth token') {
+    return (
+      <main className="shell">
+        <AuthRequiredCard
+          nextPath={`/orders/${orderId}`}
+          detail="Sign in first to open this authenticated order detail preview from the Next queue path."
+        />
       </main>
     );
   }
