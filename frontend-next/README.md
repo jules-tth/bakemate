@@ -19,11 +19,16 @@ What this does not claim:
 ```bash
 cd frontend-next
 npm install
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api/v1 npm run dev
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api/v1 npm run dev -- --hostname localhost --port 5173
 ```
 
 Then open:
-- `/` for the public preview landing page
+- `http://localhost:5173/` for the public preview landing page
 - `/login` to prove auth/token compatibility
 - `/ops` to prove authenticated shell connectivity
 - `/orders` for the authenticated queue preview
+
+The backend seed path creates `test@example.com` / `password` and one repeatable
+preview validation order. The default backend CORS origins include both
+`http://localhost:5173` and `http://127.0.0.1:5173`; keep the browser on one of
+those origins for the authenticated preview path.

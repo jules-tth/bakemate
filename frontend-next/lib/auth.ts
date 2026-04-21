@@ -1,5 +1,5 @@
 export const AUTH_TOKEN_STORAGE_KEY = 'token';
-export const AUTH_API_PATH = '/auth/login';
+export const AUTH_API_PATH = '/auth/login/access-token';
 
 export function getApiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_URL || '/api/v1';

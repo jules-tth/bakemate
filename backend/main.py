@@ -29,7 +29,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://5173-firebase-bakemate-1757558933053.cluster-fizdampoefe4ktb4qlhma6i3ck.cloudworkstations.dev"],
+    allow_origins=settings.backend_cors_origins,
     allow_credentials=True,
     allow_methods=["POST", "GET", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],

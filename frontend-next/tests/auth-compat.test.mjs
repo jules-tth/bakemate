@@ -6,8 +6,8 @@ test('next scaffold keeps the current auth token storage key', () => {
   assert.equal(AUTH_TOKEN_STORAGE_KEY, 'token');
 });
 
-test('next scaffold keeps the current auth login path', () => {
-  assert.equal(AUTH_API_PATH, '/auth/login');
+test('next scaffold keeps the current auth token endpoint path', () => {
+  assert.equal(AUTH_API_PATH, '/auth/login/access-token');
 });
 
 test('next scaffold uses form-encoded credentials', () => {

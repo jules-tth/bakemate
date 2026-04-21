@@ -7,7 +7,7 @@ import { loginWithPassword, writeStoredToken } from '@/lib/auth';
 
 export function LoginForm({ nextPath }: { nextPath: string }) {
   const router = useRouter();
-  const [username, setUsername] = useState('admin@example.com');
+  const [username, setUsername] = useState('test@example.com');
   const [password, setPassword] = useState('password');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

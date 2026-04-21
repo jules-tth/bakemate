@@ -186,4 +186,4 @@ def test_order_service_prioritizes_nearest_due_and_builds_queue_risk_history(mon
         assert queue_order.balance_due_date == date(2026, 3, 13)
         assert queue_order.ops_summary.next_action == "Collect overdue deposit"
         assert queue_order.ops_summary.primary_cta_label == "Collect payment"
-        assert "Deposit due 2026-03-12" in queue_order.ops_summary.ops_attention
+        assert "Deposit due Mar 12, 2026" in queue_order.ops_summary.ops_attention

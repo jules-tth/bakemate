@@ -22,6 +22,13 @@ import {
   getQueueBadge,
   humanizeStatus,
 } from '@/lib/queue-ui';
+import {
+  PREVIEW_VALIDATION_CHECKS,
+  PREVIEW_VALIDATION_FEEDBACK_PROMPT,
+  getPreviewValidationFeedbackHref,
+  getPreviewValidationPathLabel,
+  getPreviewValidationStateLabel,
+} from '@/lib/preview-validation';
 
 function getSummaryCards(summary: DayRunningSummary | null) {
   return [
@@ -125,8 +132,9 @@ export function OpsShellProof() {
             <div className="label">Preview</div>
             <h1 style={{ margin: '8px 0 0' }}>Ops Home</h1>
             <p className="muted" style={{ maxWidth: 860, marginBottom: 0 }}>
-              A visible front door for BakeMate’s trusted day-running view. This parity-first Next.js slice preserves
-              the accepted `/ops` structure and meaning and now hands off into a real Next `/orders` queue, while still leaving order detail in the current app.
+              A visible front door for BakeMate's trusted day-running view. This parity-first Next.js slice preserves
+              the accepted `/ops` structure and meaning and now hands off into a real Next `/orders` queue and order-detail entry.
+              React/Vite remains the trusted live frontend.
             </p>
           </div>
           <div className="row">
@@ -143,6 +151,40 @@ export function OpsShellProof() {
               </button>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="card stack preview-validation-card" aria-labelledby="preview-validation-title">
+        <div className="row spread start">
+          <div>
+            <div className="label">BM-094 preview validation</div>
+            <h2 id="preview-validation-title" style={{ margin: '8px 0 0' }}>What to test in Next</h2>
+            <p className="muted" style={{ maxWidth: 900, marginBottom: 0 }}>
+              Validate the accepted BM-093 click-through path: {getPreviewValidationPathLabel()}.
+              This is a bounded Next preview, not a cutover or full parity claim.
+            </p>
+          </div>
+          <a className="button" href={getPreviewValidationFeedbackHref()}>
+            Report mismatch
+          </a>
+        </div>
+
+        <div className="grid validation-grid">
+          {PREVIEW_VALIDATION_CHECKS.map((check) => (
+            <article className="validation-item" key={check.label}>
+              <div className="row" style={{ gap: 8 }}>
+                <span className="validation-mark" aria-hidden="true">✓</span>
+                <span className="pill neutral">{getPreviewValidationStateLabel(check.state)}</span>
+              </div>
+              <div style={{ fontWeight: 700, marginTop: 10 }}>{check.label}</div>
+              <div className="muted" style={{ marginTop: 6 }}>{check.detail}</div>
+            </article>
+          ))}
+        </div>
+
+        <div className="feedback-prompt">
+          <div className="label">Mismatch note prompt</div>
+          <div style={{ marginTop: 6 }}>{PREVIEW_VALIDATION_FEEDBACK_PROMPT}</div>
         </div>
       </section>
 
