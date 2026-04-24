@@ -1,13 +1,18 @@
 name: CI Test Workflow
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONPATH: .
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -22,9 +27,25 @@ jobs:
       run: pytest --cov=app --cov-report=xml
     - name: Enforce coverage
       run: |
-        TOTAL=$(python - <<'PY'
-import xml.etree.ElementTree as ET, sys
-tree=ET.parse('coverage.xml'); rate=float(tree.getroot().attrib['line-rate'])
-print(int(rate*100)); PY)
+        TOTAL=$(python -c "import xml.etree.ElementTree as ET; tree=ET.parse('coverage.xml'); print(int(float(tree.getroot().attrib['line-rate'])*100))")
         if [ "$TOTAL" -lt 80 ]; then
-          echo "Coverage $TOTAL% below target"; exit 1; fi
+          echo "Coverage $TOTAL% below target"; exit 1
+        fi
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-next
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: frontend-next/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+    - name: Run tests
+      run: npm test
