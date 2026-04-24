@@ -1,59 +1,36 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardLayout from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
 import Dashboard from './pages/Dashboard';
 import Recipes from './pages/Recipes';
-import RecipeDetail from './pages/RecipeDetail';
 import Ingredients from './pages/Ingredients';
 import Orders from './pages/Orders';
-import Import from './pages/Import';
-import Profile from './pages/Profile';
-import Pricing from './pages/Pricing';
-import Calendar from './pages/Calendar';
-import Expenses from './pages/Expenses';
-import Mileage from './pages/Mileage';
-import Reports from './pages/Reports';
-import IncomeStatement from './pages/reports/IncomeStatement';
-import ExpensesReport from './pages/reports/ExpensesReport';
-import MileageReport from './pages/reports/MileageReport';
-
-const queryClient = new QueryClient();
+import OrderDetail from './pages/OrderDetail';
+import ImportedRecords from './pages/ImportedRecords';
+import OpsHome from './pages/OpsHome';
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <Routes>
+    <AuthProvider>
+      <Router>
+        <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
           <Route path="/" element={<PrivateRoute />}>
             <Route path="/" element={<DashboardLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="recipes" element={<Recipes />} />
-              <Route path="recipes/:id" element={<RecipeDetail />} />
               <Route path="ingredients" element={<Ingredients />} />
+              <Route path="ops" element={<OpsHome />} />
               <Route path="orders" element={<Orders />} />
-              <Route path="import" element={<Import />} />
-              <Route path="pricing" element={<Pricing />} />
-              <Route path="calendar" element={<Calendar />} />
-              <Route path="expenses" element={<Expenses />} />
-              <Route path="mileage" element={<Mileage />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="reports/income-statement" element={<IncomeStatement />} />
-              <Route path="reports/expenses" element={<ExpensesReport />} />
-              <Route path="reports/mileage" element={<MileageReport />} />
-              <Route path="profile" element={<Profile />} />
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="orders/imported" element={<ImportedRecords />} />
+              <Route path="orders/:orderId" element={<OrderDetail />} />
+              <Route index element={<Navigate to="/ops" replace />} />
             </Route>
           </Route>
-          </Routes>
-        </Router>
-      </AuthProvider>
-    </QueryClientProvider>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }

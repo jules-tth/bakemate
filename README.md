@@ -13,13 +13,28 @@ BakeMate is an open source, web-first SaaS platform that helps solo U.S. bakers 
 
 ## Getting Started
 
-The easiest way to try BakeMate is with Docker Compose:
+BakeMate should be run in **Docker Compose by default** for development. Do not rely on ad-hoc host-run frontend/backend processes as the normal workflow.
+
+Before changing any BakeMate host port mappings, first read `/home/jules/.openclaw/workspace/PORTS.md` and run `/home/jules/.openclaw/workspace/scripts/check-port.sh <port>`.
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
-This will start the backend on port `8000`, the frontend on port `3000`, and an Nginx reverse proxy on port `80`.
+This starts:
+- backend on host port `8300`
+- frontend container on host port `3300`
+- Nginx reverse proxy on host port `8301`
+
+Recommended access points:
+- app via reverse proxy: `http://localhost:8301/`
+- app via LAN: `http://<your-lan-ip>:8301/`
+- backend health: `http://localhost:8300/health`
+
+For this host specifically, the current LAN URL is:
+- `http://192.168.86.24:8301/`
+
+Keep the Docker dev environment running while implementation work is in progress unless a task explicitly requires rebuilding/restarting it.
 
 For a detailed setup guide, see [docs/developer_guide.md](docs/developer_guide.md). User-facing instructions live in [docs/user_guide.md](docs/user_guide.md).
 

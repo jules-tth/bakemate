@@ -1,6 +1,5 @@
-# Dump files
-.dump/*
-!.dump/endpoints.csv
+# Ignore dump files
+.dump/
 backend/.dump/
 tmp/
 

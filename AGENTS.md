@@ -54,12 +54,14 @@ Prefer alternatives that do not require escalation. If escalation is necessary, 
 
 - Setup venv: `cd backend && make setup`
 - Run server: `cd backend && make run`
-- Tests: `cd backend && make test unit` (pytest/coverage), `cd backend && make test-e2e` (API e2e), `make lint` (black)
+- Tests: `cd backend && make test unit` (pytest/coverage), `make lint` (black)
+- For targeted pytest runs, prefer backend-local execution so imports resolve correctly: `cd backend && PYTHONPATH=. .venv/bin/pytest tests/unit/...`
+- If `.venv` looks stale or miswired on this host, rebuild it with `cd backend && make setup` before claiming backend verification is blocked by code.
 - Logs: `cd backend && python tools/log_watcher.py` (activate venv first)
 
 ## Frontend Routines
 
-- Lint/Test: `cd frontend && npm install && npm run lint && npm test`
+- Lint: `cd frontend && npm install && npm run lint`
 - Dev server/build: follow `frontend/README.md` and Vite scripts; avoid installs unless necessary and approved.
 
 ## Message Style & Structure

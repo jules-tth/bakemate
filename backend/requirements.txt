@@ -21,6 +21,7 @@ stripe
 # Addtional pkgs
 pydantic_settings
 pydantic[email]
+openpyxl
 pytest
 httpx
 pytest-cov

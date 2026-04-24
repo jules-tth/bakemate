@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
-from pydantic import ConfigDict
+from pydantic import AliasChoices, ConfigDict, Field as PydanticField
 import uuid
 from .base import TenantBaseModel
 
@@ -90,7 +90,7 @@ class RecipeCreate(SQLModel):
     user_id: Optional[uuid.UUID] = None  # Set internally
     name: str
     description: Optional[str] = None
-    steps: str = Field(alias="instructions")
+    steps: str = PydanticField(validation_alias=AliasChoices("steps", "instructions"))
     prep_time: Optional[int] = None
     cook_time: Optional[int] = None
     yield_quantity: Optional[float] = None
@@ -119,7 +119,9 @@ class RecipeRead(SQLModel):
 class RecipeUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    steps: Optional[str] = Field(default=None, alias="instructions")
+    steps: Optional[str] = PydanticField(
+        default=None, validation_alias=AliasChoices("steps", "instructions")
+    )
     prep_time: Optional[int] = None
     cook_time: Optional[int] = None
     yield_quantity: Optional[float] = None

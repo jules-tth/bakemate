@@ -104,7 +104,7 @@ def test_create_recipe_calculates_cost_and_links():
     recipe_in = RecipeCreate(
         user_id=user_id,
         name="Cake",
-        steps="mix",
+        instructions="mix",
         ingredients=[
             RecipeIngredientLinkCreate(
                 ingredient_id=ingredient_id, quantity=2, unit="g"

@@ -7,20 +7,23 @@ from fastapi import (
     Body,
     Header,
     Response,
-    UploadFile,
-    File,
 )
-from typing import List, Optional
+from typing import Annotated, List, Optional
 from uuid import UUID
 from datetime import date, datetime, timezone
 
 from sqlmodel import Session, select, func
 import stripe  # For webhook verification if not done by a library
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from app.repositories.sqlite_adapter import get_session
 from app.services.order_service import OrderService, QuoteService
 from app.models.order import (
+    DayRunningQueueSummary,
+    ImportedOrderQueueSummary,
+    ImportedOrderReviewReason,
     Order,
+    OrderDayRunningTriageFilter,
     OrderCreate,
     OrderRead,
     OrderUpdate,
@@ -33,11 +36,38 @@ from app.models.order import (
     QuoteStatus,
 )  # Added Quote models
 from app.models.user import User
-from app.models.contact import Contact
 from app.auth.dependencies import get_current_active_user
 from app.core.config import settings
 
 router = APIRouter()
+
+
+def _raise_local_dev_readiness_error(exc: Exception) -> None:
+    detail = str(exc)
+    if "no such column" not in detail.lower():
+        raise exc
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={
+            "code": "local_dev_schema_stale",
+            "message": "Local dev data needs a schema refresh before Ops Home can load live queue data.",
+            "title": "Local dev setup needs refresh",
+            "note": "This is a local BakeMate setup issue, not a bakery workflow status.",
+            "action": "Refresh or reseed the local dev database, then reload /ops.",
+            "recovery_command_label": "Run locally from the BakeMate repo",
+            "recovery_command": "docker compose up --build -d",
+            "guidance_title": "How to recover locally",
+            "guidance_source": "README.md and docs/developer_guide.md",
+            "guidance_steps": [
+                "Use the normal BakeMate local setup flow from README.md or docs/developer_guide.md to refresh the local dev environment.",
+                "If your local BakeMate database was recreated, repopulate it using your usual local seed path before reloading /ops.",
+                "Reload /ops after the local dev database is refreshed.",
+            ],
+            "raw_error": detail,
+        },
+    )
+
 
 # --- Order Endpoints --- #
 
@@ -64,26 +94,88 @@ async def read_orders(
     session: Session = Depends(get_session),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
-    status: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    imported_only: Annotated[bool, Query()] = False,
+    search: Annotated[Optional[str], Query()] = None,
+    needs_review: Annotated[Optional[bool], Query()] = None,
+    review_reason: Annotated[Optional[ImportedOrderReviewReason], Query()] = None,
+    day_running: Annotated[Optional[OrderDayRunningTriageFilter], Query()] = None,
+    action_class: Annotated[Optional[str], Query()] = None,
+    urgency: Annotated[Optional[str], Query()] = None,
     current_user: User = Depends(get_current_active_user),
 ):
     order_service = OrderService(session=session)
     status_enum: Optional[OrderStatus] = None
-    if status and status.lower() not in {"open"}:
-        try:
-            status_enum = OrderStatus(status.lower())
-        except ValueError:
-            status_enum = None
-    orders = await order_service.get_orders_by_user(
-        current_user=current_user, skip=skip, limit=limit, status=status_enum
-    )
-    if status and status.lower() == "open":
+    status_value = status_filter if isinstance(status_filter, str) else None
+    is_open_filter = bool(status_value and status_value.lower() == "open")
+    if status_value and not is_open_filter:
+        status_enum = OrderStatus(status_value.lower())
+    try:
+        orders = await order_service.get_orders_by_user(
+            current_user=current_user,
+            skip=skip,
+            limit=limit,
+            status=status_enum,
+            imported_only=imported_only,
+            search=search,
+            needs_review=needs_review,
+            review_reason=review_reason,
+            day_running=day_running,
+            action_class=action_class,
+            urgency=urgency,
+        )
+    except (OperationalError, ProgrammingError) as exc:
+        _raise_local_dev_readiness_error(exc)
+    if is_open_filter:
         orders = [
-            o
-            for o in orders
-            if o.status not in {OrderStatus.COMPLETED, OrderStatus.CANCELLED}
+            order
+            for order in orders
+            if order.status not in {OrderStatus.COMPLETED, OrderStatus.CANCELLED}
         ]
     return orders
+
+
+@router.get("/day-running/summary", response_model=DayRunningQueueSummary)
+async def read_day_running_queue_summary(
+    *,
+    session: Session = Depends(get_session),
+    status_filter: Optional[OrderStatus] = Query(None, alias="status"),
+    imported_only: Annotated[bool, Query()] = False,
+    search: Annotated[Optional[str], Query()] = None,
+    needs_review: Annotated[Optional[bool], Query()] = None,
+    review_reason: Annotated[Optional[ImportedOrderReviewReason], Query()] = None,
+    action_class: Annotated[Optional[str], Query()] = None,
+    urgency: Annotated[Optional[str], Query()] = None,
+    current_user: User = Depends(get_current_active_user),
+):
+    order_service = OrderService(session=session)
+    try:
+        return await order_service.get_day_running_queue_summary(
+            current_user=current_user,
+            status=status_filter,
+            imported_only=imported_only,
+            search=search,
+            needs_review=needs_review,
+            review_reason=review_reason,
+            action_class=action_class,
+            urgency=urgency,
+        )
+    except (OperationalError, ProgrammingError) as exc:
+        _raise_local_dev_readiness_error(exc)
+
+
+@router.get("/imported/summary", response_model=ImportedOrderQueueSummary)
+async def read_imported_order_summary(
+    *,
+    session: Session = Depends(get_session),
+    search: Annotated[Optional[str], Query()] = None,
+    current_user: User = Depends(get_current_active_user),
+):
+    order_service = OrderService(session=session)
+    return await order_service.get_imported_order_queue_summary(
+        current_user=current_user,
+        search=search,
+    )
 
 
 @router.get("/summary")
@@ -92,28 +184,26 @@ async def orders_summary(
     session: Session = Depends(get_session),
     start: date,
     end: date,
-    status: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
     current_user: User = Depends(get_current_active_user),
 ):
     start_dt = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
     end_dt = datetime.combine(end, datetime.max.time(), tzinfo=timezone.utc)
-    stmt = select(func.count(Order.id)).where(
+    statement = select(func.count(Order.id)).where(
         Order.user_id == current_user.id,
         Order.order_date >= start_dt,
         Order.order_date <= end_dt,
     )
-    if status:
-        if status.lower() == "open":
-            stmt = stmt.where(
+    if status_filter:
+        if status_filter.lower() == "open":
+            statement = statement.where(
                 Order.status.notin_([OrderStatus.COMPLETED, OrderStatus.CANCELLED])
             )
         else:
-            try:
-                status_enum = OrderStatus(status.lower())
-                stmt = stmt.where(Order.status == status_enum)
-            except ValueError:
-                pass
-    total = session.exec(stmt).one()
+            statement = statement.where(
+                Order.status == OrderStatus(status_filter.lower())
+            )
+    total = session.exec(statement).one()
     return {"count": int(total)}
 
 
@@ -410,380 +500,3 @@ async def get_client_portal_url_for_order(
             detail="Could not generate portal URL or order not found.",
         )
     return {"url": url}
-
-
-@router.post("/import", response_model=dict)
-async def import_orders_from_csv(
-    *,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    Import orders from CSV located under `tmp/import_data/*Orders*.csv`.
-    Skips rows marked as quotes. Avoids duplicates by `order_number`.
-    """
-    import csv
-    from datetime import datetime, timezone
-    from pathlib import Path
-    from sqlmodel import select
-
-    def resolve_import_dir() -> Path:
-        candidates = [
-            Path("tmp/import_data"),
-            Path(__file__).resolve().parents[5] / "tmp/import_data",
-            Path(__file__).resolve().parents[4] / "tmp/import_data",
-        ]
-        for p in candidates:
-            if p.exists():
-                return p
-        return candidates[0]
-
-    def parse_date(value: str):
-        value = (value or "").strip()
-        for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(value, fmt)
-            except Exception:
-                continue
-        raise ValueError(f"Unrecognized date format: {value}")
-
-    def to_float(x: str) -> float:
-        x = (x or "").replace(",", "").strip()
-        try:
-            return float(x) if x else 0.0
-        except Exception:
-            return 0.0
-
-    def none_if_null(x: str | None) -> str | None:
-        if x is None:
-            return None
-        s = x.strip()
-        return None if s.upper() == "NULL" or s == "" else s
-
-    def status_from_row(row: dict) -> OrderStatus:
-        status_raw = (row.get("OrderStatusId") or "").strip()
-        if status_raw == "2":
-            return OrderStatus.CONFIRMED
-        if status_raw == "3":
-            return OrderStatus.IN_PROGRESS
-        if status_raw == "4":
-            return OrderStatus.COMPLETED
-        if status_raw == "5":
-            return OrderStatus.CANCELLED
-        return OrderStatus.INQUIRY
-
-    def status_from_row(row: dict) -> OrderStatus:
-        is_quote = (row.get("IsQuote") or "0").strip()
-        if is_quote in ("1", "true", "True"):
-            # These will be skipped by caller, default here not used
-            return OrderStatus.INQUIRY
-        status_raw = (row.get("OrderStatusId") or "").strip()
-        # Basic mapping fallback
-        if status_raw == "2":
-            return OrderStatus.CONFIRMED
-        if status_raw == "3":
-            return OrderStatus.IN_PROGRESS
-        if status_raw == "4":
-            return OrderStatus.COMPLETED
-        if status_raw == "5":
-            return OrderStatus.CANCELLED
-        return OrderStatus.INQUIRY
-
-    import_dir = resolve_import_dir()
-    matches = list(import_dir.glob("*Orders*.csv"))
-    if not matches:
-        return {
-            "imported": 0,
-            "skipped": 0,
-            "errors": ["No Orders CSV found."],
-            "files": [],
-        }
-
-    imported = 0
-    skipped = 0
-    errors: list[str] = []
-    files: list[str] = []
-
-    for file_path in matches:
-        files.append(str(file_path))
-        try:
-            with open(file_path, "r", encoding="utf-8-sig", newline="") as f:
-                reader = csv.DictReader(f)
-                for idx, row in enumerate(reader, start=2):
-                    try:
-                        # Skip quotes
-                        if (row.get("IsQuote") or "0").strip() in ("1", "true", "True"):
-                            skipped += 1
-                            continue
-
-                        order_number = (row.get("OrderNumber") or "").strip()
-                        if not order_number:
-                            skipped += 1
-                            errors.append(
-                                f"{file_path.name} line {idx}: Missing OrderNumber"
-                            )
-                            continue
-
-                        # Duplicate check
-                        stmt = select(Order).where(
-                            Order.order_number == order_number,
-                            Order.user_id == current_user.id,
-                        )
-                        existing = session.exec(stmt).first()
-                        if existing:
-                            skipped += 1
-                            continue
-
-                        order_date = parse_date(row.get("OrderDate", ""))
-                        # Normalize to timezone-aware UTC if naive
-                        if order_date.tzinfo is None:
-                            order_date = order_date.replace(tzinfo=timezone.utc)
-
-                        due_date = order_date  # default fallback
-
-                        subtotal = to_float(row.get("SubTotalAmount"))
-                        discount = to_float(row.get("DiscountAmount"))
-                        total = to_float(row.get("TotalAmount"))
-                        delivery_fee = to_float(row.get("SetupDeliveryAmount"))
-                        tax = (
-                            to_float(row.get("ShippingTaxAmount"))
-                            + to_float(row.get("TaxAmount1"))
-                            + to_float(row.get("TaxAmount2"))
-                            + to_float(row.get("TaxAmount3"))
-                            + to_float(row.get("TaxAmount4"))
-                            + to_float(row.get("TaxAmount5"))
-                        )
-
-                        # Resolve or create Contact
-                        contact_name = none_if_null(row.get("Contact"))
-                        contact_email = none_if_null(row.get("ContactEmail"))
-                        contact_company = none_if_null(row.get("ContactCompany"))
-
-                        existing_contact = None
-                        if contact_email:
-                            stmt_c = select(Contact).where(
-                                Contact.user_id == current_user.id,
-                                Contact.email == contact_email,
-                            )
-                            existing_contact = session.exec(stmt_c).first()
-                        if existing_contact is None and contact_name:
-                            parts = contact_name.split()
-                            first = parts[0] if parts else None
-                            last = " ".join(parts[1:]) if len(parts) > 1 else None
-                            stmt_c2 = select(Contact).where(
-                                Contact.user_id == current_user.id,
-                                Contact.first_name == first,
-                                Contact.last_name == last,
-                                Contact.company_name == contact_company,
-                            )
-                            existing_contact = session.exec(stmt_c2).first()
-                        customer_id = None
-                        if existing_contact is None and (
-                            contact_name or contact_email or contact_company
-                        ):
-                            parts = (contact_name or "").split()
-                            first = parts[0] if parts else None
-                            last = " ".join(parts[1:]) if len(parts) > 1 else None
-                            new_contact = Contact(
-                                user_id=current_user.id,
-                                first_name=first,
-                                last_name=last,
-                                company_name=contact_company,
-                                email=contact_email,
-                            )
-                            session.add(new_contact)
-                            session.commit()
-                            session.refresh(new_contact)
-                            customer_id = new_contact.id
-                        elif existing_contact is not None:
-                            customer_id = existing_contact.id
-
-                        db_order = Order(
-                            user_id=current_user.id,
-                            order_number=order_number,
-                            customer_id=customer_id,
-                            customer_name=contact_name,
-                            customer_company=contact_company,
-                            customer_email=contact_email,
-                            status=status_from_row(row),
-                            payment_status=PaymentStatus.UNPAID,
-                            order_date=order_date,
-                            due_date=due_date,
-                            delivery_method=None,
-                            delivery_fee=delivery_fee or 0,
-                            subtotal=subtotal,
-                            tax=tax,
-                            discount_amount=discount or 0,
-                            total_amount=total or max(0.0, subtotal + tax - discount),
-                            event_type=(row.get("EventType") or None),
-                            theme_details=(row.get("ThemeDetails") or None),
-                            notes_to_customer=None,
-                            internal_notes=(row.get("Notes") or None),
-                        )
-
-                        session.add(db_order)
-                        session.commit()
-                        session.refresh(db_order)
-                        imported += 1
-                    except Exception as e:
-                        session.rollback()
-                        skipped += 1
-                        errors.append(f"{file_path.name} line {idx}: {e}")
-        except Exception as e:
-            errors.append(f"Failed to process {file_path.name}: {e}")
-
-    return {"imported": imported, "skipped": skipped, "errors": errors, "files": files}
-
-
-@router.post("/import-file", response_model=dict)
-async def import_orders_file(
-    *,
-    session: Session = Depends(get_session),
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    Import orders from an uploaded CSV file.
-    """
-    import csv, io
-    from datetime import datetime, timezone
-
-    def parse_date(value: str):
-        value = (value or "").strip()
-        for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(value, fmt)
-            except Exception:
-                continue
-        raise ValueError(f"Unrecognized date format: {value}")
-
-    def to_float(x: str) -> float:
-        x = (x or "").replace(",", "").strip()
-        try:
-            return float(x) if x else 0.0
-        except Exception:
-            return 0.0
-
-    def none_if_null(x: str | None) -> str | None:
-        if x is None:
-            return None
-        s = x.strip()
-        return None if s.upper() == "NULL" or s == "" else s
-
-    imported = 0
-    skipped = 0
-    errors: list[str] = []
-
-    order_service = OrderService(session=session)
-    text_stream = io.TextIOWrapper(file.file, encoding="utf-8")
-    reader = csv.DictReader(text_stream)
-    for idx, row in enumerate(reader, start=2):
-        try:
-            if (row.get("IsQuote") or "0").strip() in ("1", "true", "True"):
-                skipped += 1
-                continue
-            order_number = (row.get("OrderNumber") or "").strip()
-            if not order_number:
-                skipped += 1
-                errors.append(f"line {idx}: Missing OrderNumber")
-                continue
-            # Duplicate check
-            stmt = select(Order).where(
-                Order.order_number == order_number, Order.user_id == current_user.id
-            )
-            if session.exec(stmt).first():
-                skipped += 1
-                continue
-
-            order_date = parse_date(row.get("OrderDate", ""))
-            if order_date.tzinfo is None:
-                order_date = order_date.replace(tzinfo=timezone.utc)
-            due_date = order_date
-
-            subtotal = to_float(row.get("SubTotalAmount"))
-            discount = to_float(row.get("DiscountAmount"))
-            total = to_float(row.get("TotalAmount"))
-            delivery_fee = to_float(row.get("SetupDeliveryAmount"))
-            tax = (
-                to_float(row.get("ShippingTaxAmount"))
-                + to_float(row.get("TaxAmount1"))
-                + to_float(row.get("TaxAmount2"))
-                + to_float(row.get("TaxAmount3"))
-                + to_float(row.get("TaxAmount4"))
-                + to_float(row.get("TaxAmount5"))
-            )
-
-            # Contact linking
-            contact_name = none_if_null(row.get("Contact"))
-            contact_email = none_if_null(row.get("ContactEmail"))
-            contact_company = none_if_null(row.get("ContactCompany"))
-
-            existing_contact = None
-            if contact_email:
-                stmt_c = select(Contact).where(
-                    Contact.user_id == current_user.id,
-                    Contact.email == contact_email,
-                )
-                existing_contact = session.exec(stmt_c).first()
-            if existing_contact is None and contact_name:
-                parts = contact_name.split()
-                first = parts[0] if parts else None
-                last = " ".join(parts[1:]) if len(parts) > 1 else None
-                stmt_c2 = select(Contact).where(
-                    Contact.user_id == current_user.id,
-                    Contact.first_name == first,
-                    Contact.last_name == last,
-                    Contact.company_name == contact_company,
-                )
-                existing_contact = session.exec(stmt_c2).first()
-            customer_id = None
-            if existing_contact is None and (
-                contact_name or contact_email or contact_company
-            ):
-                parts = (contact_name or "").split()
-                first = parts[0] if parts else None
-                last = " ".join(parts[1:]) if len(parts) > 1 else None
-                new_contact = Contact(
-                    user_id=current_user.id,
-                    first_name=first,
-                    last_name=last,
-                    company_name=contact_company,
-                    email=contact_email,
-                )
-                session.add(new_contact)
-                session.commit()
-                session.refresh(new_contact)
-                customer_id = new_contact.id
-            elif existing_contact is not None:
-                customer_id = existing_contact.id
-
-            db_order = Order(
-                user_id=current_user.id,
-                order_number=order_number,
-                customer_id=customer_id,
-                customer_name=contact_name,
-                customer_company=contact_company,
-                customer_email=contact_email,
-                status=status_from_row(row),
-                payment_status=PaymentStatus.UNPAID,
-                order_date=order_date,
-                due_date=due_date,
-                delivery_fee=delivery_fee or 0,
-                subtotal=subtotal,
-                tax=tax,
-                discount_amount=discount or 0,
-                total_amount=total or max(0.0, subtotal + tax - discount),
-                event_type=(row.get("EventType") or None),
-                theme_details=(row.get("ThemeDetails") or None),
-                internal_notes=(row.get("Notes") or None),
-            )
-            session.add(db_order)
-            session.commit()
-            session.refresh(db_order)
-            imported += 1
-        except Exception as e:
-            session.rollback()
-            skipped += 1
-            errors.append(f"line {idx}: {e}")
-
-    return {"imported": imported, "skipped": skipped, "errors": errors}
