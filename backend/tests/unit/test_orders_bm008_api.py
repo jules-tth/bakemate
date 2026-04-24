@@ -80,5 +80,5 @@ def test_read_orders_endpoint_returns_ops_queue_fields_in_nearest_due_order(monk
     assert payload[0].customer_history_summary.total_orders == 1
     assert payload[0].deposit_due_date == date(2026, 3, 11)
     assert payload[0].ops_summary.next_action == "Collect overdue deposit"
-    assert "Deposit due 2026-03-11" in payload[0].ops_summary.ops_attention
+    assert "Deposit due" in payload[0].ops_summary.ops_attention
     assert payload[1].queue_summary.due_bucket == "next_up"

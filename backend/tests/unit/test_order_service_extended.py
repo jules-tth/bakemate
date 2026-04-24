@@ -29,8 +29,8 @@ def test_create_order():
     mock_session.add.return_value = None
     mock_session.commit.return_value = None
 
-    # Mock the function to avoid dependency on actual implementation
-    with patch("app.services.order_service.create_order") as mock_create:
+    # Mock the method to avoid dependency on actual implementation
+    with patch("app.services.order_service.OrderService.create_order") as mock_create:
         mock_create.return_value = mock_order
 
         # Call the function with our test data
