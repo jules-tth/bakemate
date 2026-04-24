@@ -15,6 +15,9 @@ def get_endpoints():
         os.path.join(os.path.dirname(__file__), "..", "..", ".dump", "endpoints.csv")
     )
 
+    if not os.path.exists(csv_path):
+        return []
+
     with open(csv_path, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
