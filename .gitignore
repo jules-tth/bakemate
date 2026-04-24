@@ -1,6 +1,8 @@
 # Dump files
 .dump/*
 !.dump/endpoints.csv
+backend/.dump/
+tmp/
 
 # Application runtime artifacts
 backend/app_files/

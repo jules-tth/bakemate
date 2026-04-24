@@ -1,5 +1,5 @@
 import asyncio
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.user import User, UserCreate
 from app.models.recipe import Recipe, RecipeCreate
@@ -10,9 +10,11 @@ async def seed_data():
     with Session(engine) as session:
         user_service = UserService(session)
 
-        # Check if users already exist
-        users = session.query(User).all()
-        if users:
+        # Check if the default test user already exists.
+        user = session.exec(
+            select(User).where(User.email == "test@example.com")
+        ).first()
+        if user:
             print("Database already seeded.")
             return
 
