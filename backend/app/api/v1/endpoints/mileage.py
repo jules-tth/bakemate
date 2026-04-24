@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from typing import List, Optional
 from uuid import UUID
 from datetime import date
@@ -18,6 +18,85 @@ from app.auth.dependencies import get_current_active_user
 
 router = APIRouter()
 
+
+@router.post("/import", response_model=dict)
+async def import_mileage_from_csv(
+    *,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Import mileage logs from CSV located under `tmp/import_data/*Mileage*.csv`.
+    Expects headers: Date, Purpose, Miles, Description (others ignored).
+    """
+    import csv
+    from datetime import datetime
+    from pathlib import Path
+
+    def resolve_import_dir() -> Path:
+        candidates = [
+            Path("tmp/import_data"),
+            Path(__file__).resolve().parents[5] / "tmp/import_data",
+            Path(__file__).resolve().parents[4] / "tmp/import_data",
+        ]
+        for p in candidates:
+            if p.exists():
+                return p
+        return candidates[0]
+
+    def parse_date(value: str):
+        value = (value or "").strip()
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except Exception:
+                continue
+        raise ValueError(f"Unrecognized date format: {value}")
+
+    import_dir = resolve_import_dir()
+    matches = list(import_dir.glob("*Mileage*.csv"))
+    if not matches:
+        return {"imported": 0, "skipped": 0, "errors": ["No Mileage CSV found."], "files": []}
+
+    mileage_service = MileageService(session=session)
+    imported = 0
+    skipped = 0
+    errors = []
+    files = []
+
+    for file_path in matches:
+        files.append(str(file_path))
+        try:
+            with open(file_path, "r", encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f)
+                for idx, row in enumerate(reader, start=2):
+                    try:
+                        date_val = parse_date(row.get("Date", ""))
+                        purpose = (row.get("Purpose") or "").strip() or None
+                        miles_raw = (row.get("Miles") or row.get("Distance") or "0").replace(",", "").strip()
+                        distance = float(miles_raw or 0)
+                        order_ref = (row.get("OrderRef") or "").strip() or None
+                        notes = (row.get("Description") or "").strip() or None
+
+                        log_in = MileageLogCreate(
+                            user_id=current_user.id,
+                            date=date_val,
+                            distance=distance,
+                            purpose=purpose,
+                            order_ref=order_ref,
+                            notes=notes,
+                        )
+                        await mileage_service.create_mileage_log(
+                            log_in=log_in, current_user=current_user
+                        )
+                        imported += 1
+                    except Exception as e:
+                        skipped += 1
+                        errors.append(f"{file_path.name} line {idx}: {e}")
+        except Exception as e:
+            errors.append(f"Failed to process {file_path.name}: {e}")
+
+    return {"imported": imported, "skipped": skipped, "errors": errors, "files": files}
 
 @router.post("/", response_model=MileageLogRead, status_code=status.HTTP_201_CREATED)
 async def create_mileage_log(
@@ -130,3 +209,59 @@ async def delete_mileage_log(
             detail="Mileage log not found or not owned by user",
         )
     return deleted_log
+
+
+@router.post("/import-file", response_model=dict)
+async def import_mileage_file(
+    *,
+    session: Session = Depends(get_session),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Import mileage logs from an uploaded CSV file.
+    """
+    import csv, io
+    from datetime import datetime
+
+    def parse_date(value: str):
+        value = (value or "").strip()
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except Exception:
+                continue
+        raise ValueError(f"Unrecognized date format: {value}")
+
+    mileage_service = MileageService(session=session)
+    imported = 0
+    skipped = 0
+    errors: list[str] = []
+
+    text_stream = io.TextIOWrapper(file.file, encoding="utf-8")
+    reader = csv.DictReader(text_stream)
+    for idx, row in enumerate(reader, start=2):
+        try:
+            date_val = parse_date(row.get("Date", ""))
+            purpose = (row.get("Purpose") or "").strip() or None
+            miles_raw = (row.get("Miles") or row.get("Distance") or "0").replace(",", "").strip()
+            distance = float(miles_raw or 0)
+            order_ref = (row.get("OrderRef") or "").strip() or None
+            notes = (row.get("Description") or "").strip() or None
+            log_in = MileageLogCreate(
+                user_id=current_user.id,
+                date=date_val,
+                distance=distance,
+                purpose=purpose,
+                order_ref=order_ref,
+                notes=notes,
+            )
+            await mileage_service.create_mileage_log(
+                log_in=log_in, current_user=current_user
+            )
+            imported += 1
+        except Exception as e:
+            skipped += 1
+            errors.append(f"line {idx}: {e}")
+
+    return {"imported": imported, "skipped": skipped, "errors": errors}

@@ -31,6 +31,191 @@ from app.auth.dependencies import get_current_active_user
 router = APIRouter()
 
 
+@router.post("/import", response_model=dict)
+async def import_expenses_from_csv(
+    *,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Import expenses from CSV located under `tmp/import_data/*Expenses*.csv`.
+    Maps external categories to internal ExpenseCategory. Skips invalid rows.
+    """
+    import csv
+    from datetime import datetime
+    from pathlib import Path
+
+    def resolve_import_dir() -> Path:
+        candidates = [
+            Path("tmp/import_data"),
+            Path(__file__).resolve().parents[5] / "tmp/import_data",
+            Path(__file__).resolve().parents[4] / "tmp/import_data",
+        ]
+        for p in candidates:
+            if p.exists():
+                return p
+        return candidates[0]
+
+    def parse_date(value: str):
+        value = (value or "").strip()
+        for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except Exception:
+                continue
+        raise ValueError(f"Unrecognized date format: {value}")
+
+    category_map = {
+        "ingredients": ExpenseCategory.INGREDIENTS,
+        "supplies": ExpenseCategory.SUPPLIES,
+        "box": ExpenseCategory.SUPPLIES,
+        "board": ExpenseCategory.SUPPLIES,
+        "internet": ExpenseCategory.UTILITIES,
+        "website": ExpenseCategory.MARKETING,
+        "printing": ExpenseCategory.MARKETING,
+        "advertising": ExpenseCategory.MARKETING,
+        "memberships": ExpenseCategory.OTHER,
+        "courses": ExpenseCategory.OTHER,
+        "travel": ExpenseCategory.OTHER,
+        "fees": ExpenseCategory.FEES,
+        "utilities": ExpenseCategory.UTILITIES,
+        "rent": ExpenseCategory.RENT,
+        "marketing": ExpenseCategory.MARKETING,
+        "other": ExpenseCategory.OTHER,
+    }
+
+    import_dir = resolve_import_dir()
+    matches = list(import_dir.glob("*Expenses*.csv"))
+    if not matches:
+        return {"imported": 0, "skipped": 0, "errors": ["No Expenses CSV found."], "files": []}
+
+    expense_service = ExpenseService(session=session)
+    imported = 0
+    skipped = 0
+    errors = []
+    files = []
+
+    for file_path in matches:
+        files.append(str(file_path))
+        try:
+            with open(file_path, "r", encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f)
+                for idx, row in enumerate(reader, start=2):  # header is line 1
+                    try:
+                        date_val = parse_date(row.get("ExpenseDate", ""))
+                        description = (row.get("Description") or "").strip() or "(no description)"
+                        vendor = (row.get("Vendor") or "").strip() or None
+                        amount_raw = (row.get("Amount") or "0").replace(",", "").strip()
+                        amount = float(amount_raw or 0)
+                        vat_raw = (row.get("VatAmount") or "0").replace(",", "").strip()
+                        vat_amount = float(vat_raw or 0)
+                        category_raw = (row.get("Category") or "").strip().lower()
+                        category = category_map.get(category_raw, ExpenseCategory.OTHER)
+                        payment_source = (row.get("PaymentSource") or "").strip() or None
+
+                        exp_in = ExpenseCreate(
+                            user_id=current_user.id,
+                            date=date_val,
+                            description=description,
+                            amount=amount,
+                            category=category,
+                            vat_amount=vat_amount,
+                            payment_source=payment_source,
+                            vendor=vendor,
+                        )
+                        await expense_service.create_expense(
+                            expense_in=exp_in, current_user=current_user
+                        )
+                        imported += 1
+                    except Exception as e:
+                        skipped += 1
+                        errors.append(f"{file_path.name} line {idx}: {e}")
+        except Exception as e:
+            errors.append(f"Failed to process {file_path.name}: {e}")
+
+    return {"imported": imported, "skipped": skipped, "errors": errors, "files": files}
+
+@router.post("/import-file", response_model=dict)
+async def import_expenses_file(
+    *,
+    session: Session = Depends(get_session),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Import expenses from an uploaded CSV file.
+    """
+    import csv, io
+    from datetime import datetime
+
+    def parse_date(value: str):
+        value = (value or "").strip()
+        for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except Exception:
+                continue
+        raise ValueError(f"Unrecognized date format: {value}")
+
+    category_map = {
+        "ingredients": ExpenseCategory.INGREDIENTS,
+        "supplies": ExpenseCategory.SUPPLIES,
+        "box": ExpenseCategory.SUPPLIES,
+        "board": ExpenseCategory.SUPPLIES,
+        "internet": ExpenseCategory.UTILITIES,
+        "website": ExpenseCategory.MARKETING,
+        "printing": ExpenseCategory.MARKETING,
+        "advertising": ExpenseCategory.MARKETING,
+        "memberships": ExpenseCategory.OTHER,
+        "courses": ExpenseCategory.OTHER,
+        "travel": ExpenseCategory.OTHER,
+        "fees": ExpenseCategory.FEES,
+        "utilities": ExpenseCategory.UTILITIES,
+        "rent": ExpenseCategory.RENT,
+        "marketing": ExpenseCategory.MARKETING,
+        "other": ExpenseCategory.OTHER,
+    }
+
+    expense_service = ExpenseService(session=session)
+    imported = 0
+    skipped = 0
+    errors: list[str] = []
+
+    text_stream = io.TextIOWrapper(file.file, encoding="utf-8")
+    reader = csv.DictReader(text_stream)
+    for idx, row in enumerate(reader, start=2):
+        try:
+            date_val = parse_date(row.get("ExpenseDate", ""))
+            description = (row.get("Description") or "").strip() or "(no description)"
+            vendor = (row.get("Vendor") or "").strip() or None
+            amount_raw = (row.get("Amount") or "0").replace(",", "").strip()
+            amount = float(amount_raw or 0)
+            vat_raw = (row.get("VatAmount") or "0").replace(",", "").strip()
+            vat_amount = float(vat_raw or 0)
+            category_raw = (row.get("Category") or "").strip().lower()
+            category = category_map.get(category_raw, ExpenseCategory.OTHER)
+            payment_source = (row.get("PaymentSource") or "").strip() or None
+
+            exp_in = ExpenseCreate(
+                user_id=current_user.id,
+                date=date_val,
+                description=description,
+                amount=amount,
+                category=category,
+                vat_amount=vat_amount,
+                payment_source=payment_source,
+                vendor=vendor,
+            )
+            await expense_service.create_expense(
+                expense_in=exp_in, current_user=current_user
+            )
+            imported += 1
+        except Exception as e:
+            skipped += 1
+            errors.append(f"line {idx}: {e}")
+
+    return {"imported": imported, "skipped": skipped, "errors": errors}
+
 @router.post("/", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
 async def create_expense(
     *,

@@ -27,7 +27,9 @@ class Expense(TenantBaseModel, table=True):
     description: str
     amount: float
     category: ExpenseCategory = Field(default=ExpenseCategory.OTHER)
+    payment_source: Optional[str] = None
     vendor: Optional[str] = None
+    vat_amount: Optional[float] = 0
     notes: Optional[str] = None
 
     # For receipt uploads
@@ -46,7 +48,9 @@ class ExpenseBase(SQLModel):
     description: str
     amount: float
     category: Optional[ExpenseCategory] = ExpenseCategory.OTHER
+    payment_source: Optional[str] = None
     vendor: Optional[str] = None
+    vat_amount: Optional[float] = 0
     notes: Optional[str] = None
     receipt_filename: Optional[str] = None
 
@@ -68,7 +72,9 @@ class ExpenseUpdate(SQLModel):
     description: Optional[str] = None
     amount: Optional[float] = None
     category: Optional[ExpenseCategory] = None
+    payment_source: Optional[str] = None
     vendor: Optional[str] = None
+    vat_amount: Optional[float] = None
     notes: Optional[str] = None
     # Receipt update might be handled by a separate endpoint or by providing new filename/key
     receipt_filename: Optional[str] = None

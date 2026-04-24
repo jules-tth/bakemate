@@ -1,4 +1,6 @@
 [run]
+# Include application modules while excluding API routers from coverage.
+# Endpoint coverage is handled separately by e2e tests; metrics focus on service layer.
 omit =
     app/api/*
     app/api/*/*

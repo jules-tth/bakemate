@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 # without modifying the Docker environment directly.
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
+# Resolve project base directory so paths remain stable regardless of CWD
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
 
 def _split_env_list(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -21,7 +24,7 @@ class Settings(BaseSettings):
 
     # APP_FILES_DIR: str = os.getenv("APP_FILES_DIR", "/app/app_files") # For Docker
     APP_FILES_DIR: str = os.getenv(
-        "APP_FILES_DIR", "./app_files"
+        "APP_FILES_DIR", str(BASE_DIR / "app_files")
     )  # For local development
 
     # Database
@@ -67,6 +70,10 @@ class Settings(BaseSettings):
     # Default user settings (example)
     # DEFAULT_USER_HOURLY_RATE: float = 25.0
     # DEFAULT_USER_OVERHEAD_PER_MONTH: float = 100.0
+    # Default mileage reimbursement rate (per mile). Set via env to override.
+    DEFAULT_MILEAGE_REIMBURSEMENT_RATE: float | None = float(
+        os.getenv("DEFAULT_MILEAGE_REIMBURSEMENT_RATE", "0")
+    )
 
     model_config = ConfigDict(case_sensitive=True)
     # If you have a .env file in the root of your project (alongside docker-compose.yml)

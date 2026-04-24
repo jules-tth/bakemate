@@ -2,7 +2,8 @@ import asyncio
 from uuid import UUID, uuid4
 from unittest.mock import patch
 
-from sqlmodel import Field, SQLModel, create_engine
+from datetime import date
+from sqlmodel import Field, SQLModel, create_engine, Session
 
 from app.repositories.sqlite_adapter import SQLiteRepository
 
@@ -51,3 +52,36 @@ def test_sqlite_repository_crud_operations():
             deleted = asyncio.run(repo.delete(id=created.id))
             assert deleted.id == created.id
             assert asyncio.run(repo.get(id=created.id)) is None
+
+
+class TestExpense(SQLModel, table=True):
+    __tablename__ = "test_expense"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID
+    date: date
+
+
+def test_get_multi_filters_and_sorts():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    with patch("app.repositories.sqlite_adapter.engine", engine):
+        repo = SQLiteRepository(TestExpense)
+        user_id = uuid4()
+        with Session(engine) as session:
+            session.add_all(
+                [
+                    TestExpense(user_id=user_id, date=date(2023, 1, 1)),
+                    TestExpense(user_id=user_id, date=date(2024, 1, 1)),
+                    TestExpense(user_id=user_id, date=date(2025, 1, 1)),
+                ]
+            )
+            session.commit()
+
+        results = asyncio.run(
+            repo.get_multi(
+                filters={"user_id": user_id, "date__gte": date(2024, 1, 1)},
+                sort_by="date",
+                sort_desc=True,
+            )
+        )
+        assert [r.date for r in results] == [date(2025, 1, 1), date(2024, 1, 1)]

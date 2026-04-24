@@ -47,8 +47,25 @@ def ensure_sqlite_order_schema(target_engine=None) -> None:
 
     existing_columns = {column["name"] for column in inspector.get_columns("order")}
     required_columns = {
+        "user_id": "VARCHAR",
+        "customer_contact_id": "VARCHAR",
+        "customer_name": "VARCHAR",
+        "customer_email": "VARCHAR",
+        "customer_phone": "VARCHAR",
+        "status": "VARCHAR",
+        "payment_status": "VARCHAR",
+        "order_date": "DATETIME",
+        "delivery_method": "VARCHAR",
+        "subtotal": "FLOAT",
+        "tax": "FLOAT",
+        "total_amount": "FLOAT",
+        "deposit_amount": "FLOAT",
+        "balance_due": "FLOAT",
         "deposit_due_date": "TEXT",
         "balance_due_date": "TEXT",
+        "notes_to_customer": "VARCHAR",
+        "internal_notes": "VARCHAR",
+        "stripe_payment_intent_id": "VARCHAR",
         "stripe_checkout_session_id": "VARCHAR",
     }
 
@@ -109,17 +126,39 @@ class SQLiteRepository(
         self,
         *,
         skip: int = 0,
-        limit: int = 100,
+        limit: Optional[int] = 100,
         filters: Optional[Dict[str, Any]] = None,
-        **kwargs
+        sort_by: Optional[str] = None,
+        sort_desc: bool = False,
+        **kwargs,
     ) -> List[ModelType]:
         with self._get_session() as session:
             statement = select(self.model)
             if filters:
                 for key, value in filters.items():
-                    if hasattr(self.model, key):
+                    if "__" in key:
+                        attr, op = key.split("__", 1)
+                        column = getattr(self.model, attr, None)
+                        if not column:
+                            continue
+                        if op == "gte":
+                            statement = statement.where(column >= value)
+                        elif op == "lte":
+                            statement = statement.where(column <= value)
+                        elif op == "gt":
+                            statement = statement.where(column > value)
+                        elif op == "lt":
+                            statement = statement.where(column < value)
+                    elif hasattr(self.model, key):
                         statement = statement.where(getattr(self.model, key) == value)
-            statement = statement.offset(skip).limit(limit)
+            if sort_by and hasattr(self.model, sort_by):
+                column = getattr(self.model, sort_by)
+                statement = statement.order_by(
+                    column.desc() if sort_desc else column.asc()
+                )
+            statement = statement.offset(skip)
+            if limit is not None:
+                statement = statement.limit(limit)
             objs = session.exec(statement).all()
             return objs
 
@@ -128,7 +167,7 @@ class SQLiteRepository(
         *,
         db_obj: ModelType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]],
-        **kwargs
+        **kwargs,
     ) -> ModelType:
         obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
@@ -175,7 +214,7 @@ class SQLiteRepository(
         attribute_value: Any,
         skip: int = 0,
         limit: int = 100,
-        **kwargs
+        **kwargs,
     ) -> List[ModelType]:
         with self._get_session() as session:
             if not hasattr(self.model, attribute_name):

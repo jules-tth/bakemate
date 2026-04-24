@@ -1,0 +1,44 @@
+name: Frontend E2E (Cypress)
+
+on:
+  push:
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+      - 'cypress/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'tsconfig*.json'
+  pull_request:
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+      - 'cypress/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'tsconfig*.json'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Cypress run (build + preview)
+        uses: cypress-io/github-action@v6
+        with:
+          build: npm ci && npm run build
+          start: npm run preview:e2e
+          wait-on: 'http://localhost:5173'
+          spec: cypress/integration/smoke_spec.js
+          browser: chrome
+

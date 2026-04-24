@@ -17,6 +17,7 @@ class MileageLog(TenantBaseModel, table=True):
     end_location: Optional[str] = None
     distance: float  # in miles or km, user preference might be a setting
     purpose: Optional[str] = None  # e.g., Delivery, Supply Run, Client Meeting
+    order_ref: Optional[str] = None  # External reference to an order number/id
     vehicle_identifier: Optional[str] = None  # e.g., "My Car", "Van"
     notes: Optional[str] = None
 
@@ -40,6 +41,7 @@ class MileageLogBase(SQLModel):
     end_location: Optional[str] = None
     distance: float
     purpose: Optional[str] = None
+    order_ref: Optional[str] = None
     vehicle_identifier: Optional[str] = None
     notes: Optional[str] = None
     reimbursement_rate: Optional[float] = (
@@ -65,6 +67,7 @@ class MileageLogUpdate(SQLModel):
     end_location: Optional[str] = None
     distance: Optional[float] = None
     purpose: Optional[str] = None
+    order_ref: Optional[str] = None
     vehicle_identifier: Optional[str] = None
     notes: Optional[str] = None
     reimbursement_rate: Optional[float] = None

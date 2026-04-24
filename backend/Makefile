@@ -1,7 +1,8 @@
-.PHONY: run install test help setup lint
+.PHONY: run install test test-e2e help setup lint
 
 VENV_DIR = .venv
 PYTHON=${VENV_DIR}/bin/python
+export PYTHONPATH := .:$(PYTHONPATH)
 
 # Help target to display available commands with descriptions
 help:
@@ -11,6 +12,8 @@ help:
 	@echo "  test <unittest> Run tests."
 	@echo "  lint            Run linter black on codebase"
 	@echo "  run             Run the software."
+	@echo "  db-revision     Create a new Alembic revision (message=...)."
+	@echo "  db-upgrade      Apply Alembic migrations to head."
 	@echo "  clean           Remove build artifacts and temporary files."
 	@echo "  environment     Print out the current environment."
 	@echo "  all             Run setup, test, build, and then run."
@@ -31,9 +34,10 @@ run: activate setup
 	$(VENV_DIR)/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Run tests
-test: activate setup
-	$(VENV_DIR)/bin/pytest -v --cov=app tests/$(filter-out $@,$(MAKECMDGOALS))
+test: activate setup ; $(VENV_DIR)/bin/pytest -v --cov=app tests/$(filter-out $@,$(MAKECMDGOALS))
 
+# Run end-to-end tests
+test-e2e: activate setup ; $(VENV_DIR)/bin/pytest -v tests/e2e
 # Allow additional arguments such as `make test unit` without requiring
 # explicit targets for them. The trailing rule consumes any unknown
 # target names so they can be passed through to pytest via MAKECMDGOALS.
@@ -49,3 +53,11 @@ clean:
 lint: setup
 	$(VENV_DIR)/bin/black app/ tests/ tools/ scripts/
 
+# Database migrations (requires alembic installed in venv)
+db-revision:
+	@test -x $(VENV_DIR)/bin/alembic || (echo "alembic not installed in venv" && exit 1)
+	$(VENV_DIR)/bin/alembic revision -m "$(message)"
+
+db-upgrade:
+	@test -x $(VENV_DIR)/bin/alembic || (echo "alembic not installed in venv" && exit 1)
+	$(VENV_DIR)/bin/alembic upgrade head

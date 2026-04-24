@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import type { AxiosRequestConfig, AxiosRequestHeaders } from 'axios';
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -11,11 +12,71 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  config.headers = config.headers ?? {};
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (config.data instanceof FormData) {
+    if ('Content-Type' in config.headers) {
+      delete (config.headers as AxiosRequestHeaders)['Content-Type'];
+    }
+  } else if (!('Content-Type' in config.headers)) {
+    config.headers['Content-Type'] = 'application/json';
+  }
   return config;
 });
+
+export const redirectToLogin = () => {
+  window.location.assign('/login');
+};
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+}
+
+export const refreshAccessToken = async (
+  refreshToken: string,
+): Promise<TokenResponse> => {
+  const response = await apiClient.post<TokenResponse>('/auth/refresh', {
+    refresh_token: refreshToken,
+  });
+  return response.data;
+};
+
+export const handleApiError = async (
+  error: AxiosError,
+  redirect: () => void = redirectToLogin,
+) => {
+  if (error.response?.status === 401) {
+    if (error.config) {
+      const refresh = localStorage.getItem('refreshToken');
+      const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+      if (refresh && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          const { access_token, refresh_token } = await refreshAccessToken(refresh);
+          localStorage.setItem('token', access_token);
+          localStorage.setItem('refreshToken', refresh_token);
+          apiClient.defaults.headers.common.Authorization = `Bearer ${access_token}`;
+          originalRequest.headers = {
+            ...originalRequest.headers,
+            Authorization: `Bearer ${access_token}`,
+          };
+          return apiClient.request(originalRequest);
+        } catch {
+          redirect();
+        }
+      } else {
+        redirect();
+      }
+    } else {
+      redirect();
+    }
+  }
+  console.error(error);
+  return Promise.reject(error);
+};
 
 export interface OrderItemPayload {
   name: string;
@@ -287,5 +348,7 @@ export const ordersApi = {
     return response.data;
   },
 };
+
+apiClient.interceptors.response.use((response) => response, handleApiError);
 
 export default apiClient;

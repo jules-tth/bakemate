@@ -24,11 +24,13 @@ The project uses pytest and black for backend code and ESLint for the frontend.
 # Backend
 cd backend
 make test unit                       # run tests
+make test-e2e                        # run end-to-end tests
 make lint                            # lint
 
 # Frontend
 cd frontend && npm install
 npm run lint                         # lint TypeScript/React files
+npm test                             # run frontend unit tests
 ```
 Some tests rely on fixture data and may fail if certain files are missing. At minimum, ensure the test suite executes without import errors.
 

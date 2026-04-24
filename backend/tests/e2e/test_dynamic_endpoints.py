@@ -4,7 +4,11 @@ import csv
 import os
 from main import app
 
-client = TestClient(app)
+
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
 
 
 def get_endpoints():
@@ -130,7 +134,7 @@ def get_test_data_for_endpoint(method, path, requires_body):
 
 
 @pytest.mark.parametrize("endpoint", get_endpoints())
-def test_endpoint(endpoint):
+def test_endpoint(client, endpoint):
     """Test each endpoint from the CSV file."""
     method = endpoint["method"]
     path = endpoint["path"]

@@ -16,6 +16,7 @@ def test_ensure_sqlite_order_schema_adds_bm006_columns():
     ensure_sqlite_order_schema(engine)
 
     columns = {column["name"] for column in inspect(engine).get_columns("order")}
+    assert "customer_contact_id" in columns
     assert "deposit_due_date" in columns
     assert "balance_due_date" in columns
     assert "stripe_checkout_session_id" in columns

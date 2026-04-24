@@ -10,8 +10,9 @@ from fastapi import (
 )
 from typing import Annotated, List, Optional
 from uuid import UUID
+from datetime import date, datetime, timezone
 
-from sqlmodel import Session
+from sqlmodel import Session, select, func
 import stripe  # For webhook verification if not done by a library
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
@@ -67,6 +68,7 @@ def _raise_local_dev_readiness_error(exc: Exception) -> None:
         },
     )
 
+
 # --- Order Endpoints --- #
 
 
@@ -92,7 +94,7 @@ async def read_orders(
     session: Session = Depends(get_session),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
-    status_filter: Optional[OrderStatus] = Query(None, alias="status"),
+    status_filter: Optional[str] = Query(None, alias="status"),
     imported_only: Annotated[bool, Query()] = False,
     search: Annotated[Optional[str], Query()] = None,
     needs_review: Annotated[Optional[bool], Query()] = None,
@@ -103,12 +105,17 @@ async def read_orders(
     current_user: User = Depends(get_current_active_user),
 ):
     order_service = OrderService(session=session)
+    status_enum: Optional[OrderStatus] = None
+    status_value = status_filter if isinstance(status_filter, str) else None
+    is_open_filter = bool(status_value and status_value.lower() == "open")
+    if status_value and not is_open_filter:
+        status_enum = OrderStatus(status_value.lower())
     try:
         orders = await order_service.get_orders_by_user(
             current_user=current_user,
             skip=skip,
             limit=limit,
-            status=status_filter,
+            status=status_enum,
             imported_only=imported_only,
             search=search,
             needs_review=needs_review,
@@ -119,6 +126,12 @@ async def read_orders(
         )
     except (OperationalError, ProgrammingError) as exc:
         _raise_local_dev_readiness_error(exc)
+    if is_open_filter:
+        orders = [
+            order
+            for order in orders
+            if order.status not in {OrderStatus.COMPLETED, OrderStatus.CANCELLED}
+        ]
     return orders
 
 
@@ -163,6 +176,35 @@ async def read_imported_order_summary(
         current_user=current_user,
         search=search,
     )
+
+
+@router.get("/summary")
+async def orders_summary(
+    *,
+    session: Session = Depends(get_session),
+    start: date,
+    end: date,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    current_user: User = Depends(get_current_active_user),
+):
+    start_dt = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
+    end_dt = datetime.combine(end, datetime.max.time(), tzinfo=timezone.utc)
+    statement = select(func.count(Order.id)).where(
+        Order.user_id == current_user.id,
+        Order.order_date >= start_dt,
+        Order.order_date <= end_dt,
+    )
+    if status_filter:
+        if status_filter.lower() == "open":
+            statement = statement.where(
+                Order.status.notin_([OrderStatus.COMPLETED, OrderStatus.CANCELLED])
+            )
+        else:
+            statement = statement.where(
+                Order.status == OrderStatus(status_filter.lower())
+            )
+    total = session.exec(statement).one()
+    return {"count": int(total)}
 
 
 @router.get("/{order_id}", response_model=OrderRead)

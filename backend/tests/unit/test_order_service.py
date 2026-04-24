@@ -1,6 +1,16 @@
+import asyncio
+from datetime import datetime, timezone
+
 import pytest
-from app.models.order import Order
-from app.services.order_service import calculate_order_total, apply_discount
+from sqlmodel import SQLModel, Session, create_engine
+
+from app.models.order import Order, OrderStatus
+from app.models.user import User
+from app.services.order_service import (
+    OrderService,
+    calculate_order_total,
+    apply_discount,
+)
 
 
 def test_calculate_order_total():
@@ -96,3 +106,38 @@ def test_service_wrappers_init():
 
     assert OrderService().session is None
     assert QuoteService().session is None
+
+
+def test_get_orders_by_user():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    session = Session(engine)
+    service = OrderService(session=session)
+
+    user = User(email="owner@example.com", hashed_password="x")
+    other = User(email="other@example.com", hashed_password="x")
+    session.add(user)
+    session.add(other)
+    session.commit()
+    session.refresh(user)
+    session.refresh(other)
+
+    due = datetime.now(timezone.utc)
+    order1 = Order(user_id=user.id, order_number="A1", due_date=due)
+    order2 = Order(
+        user_id=user.id,
+        order_number="A2",
+        due_date=due,
+        status=OrderStatus.CONFIRMED,
+    )
+    order3 = Order(user_id=other.id, order_number="B1", due_date=due)
+    session.add_all([order1, order2, order3])
+    session.commit()
+
+    orders = asyncio.run(service.get_orders_by_user(current_user=user))
+    assert {o.order_number for o in orders} == {"A1", "A2"}
+
+    confirmed = asyncio.run(
+        service.get_orders_by_user(current_user=user, status=OrderStatus.CONFIRMED)
+    )
+    assert len(confirmed) == 1 and confirmed[0].order_number == "A2"

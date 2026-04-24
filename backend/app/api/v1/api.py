@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     reports,
     inventory,
     marketing,
+    dashboard,
 )
 from app.api.v1.endpoints.shop import (
     shop_endpoints,
@@ -57,3 +58,6 @@ api_router.include_router(inventory.router, prefix="/inventory", tags=["Inventor
 
 # Marketing routes
 api_router.include_router(marketing.router, prefix="/marketing", tags=["Marketing"])
+
+# Dashboard routes
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])

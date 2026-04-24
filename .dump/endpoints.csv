@@ -1,0 +1,73 @@
+method,path,requires_body,operation_id,summary
+POST,/api/v1/auth/register,true,register_new_user_api_v1_auth_register_post,Register New User
+POST,/api/v1/auth/login/access-token,true,login_for_access_token_api_v1_auth_login_access_token_post,Login For Access Token
+POST,/api/v1/users/verify-email-request,false,request_email_verification_api_v1_users_verify_email_request_post,Request Email Verification
+GET,/api/v1/users/verify-email/,false,verify_email_api_v1_users_verify_email__get,Verify Email
+GET,/api/v1/users/users/me,false,read_users_me_api_v1_users_users_me_get,Read Users Me
+GET,/api/v1/users/users/all,false,read_all_users_api_v1_users_users_all_get,Read All Users
+POST,/api/v1/ingredients/,true,create_ingredient_api_v1_ingredients__post,Create Ingredient
+GET,/api/v1/ingredients/,false,read_ingredients_api_v1_ingredients__get,Read Ingredients
+GET,/api/v1/ingredients/{ingredient_id},false,read_ingredient_api_v1_ingredients__ingredient_id__get,Read Ingredient
+PUT,/api/v1/ingredients/{ingredient_id},true,update_ingredient_api_v1_ingredients__ingredient_id__put,Update Ingredient
+DELETE,/api/v1/ingredients/{ingredient_id},false,delete_ingredient_api_v1_ingredients__ingredient_id__delete,Delete Ingredient
+POST,/api/v1/recipes/,true,create_recipe_api_v1_recipes__post,Create Recipe
+GET,/api/v1/recipes/,false,read_recipes_api_v1_recipes__get,Read Recipes
+GET,/api/v1/recipes/{recipe_id},false,read_recipe_api_v1_recipes__recipe_id__get,Read Recipe
+PUT,/api/v1/recipes/{recipe_id},true,update_recipe_api_v1_recipes__recipe_id__put,Update Recipe
+DELETE,/api/v1/recipes/{recipe_id},false,delete_recipe_api_v1_recipes__recipe_id__delete,Delete Recipe
+POST,/api/v1/recipes/trigger-cost-update/ingredient/{ingredient_id},false,trigger_recipe_cost_updates_for_ingredient_api_v1_recipes_trigger_cost_update_ingredient__ingredient_id__post,Trigger Recipe Cost Updates For Ingredient
+GET,/api/v1/pricing/configuration,false,get_pricing_configuration_api_v1_pricing_configuration_get,Get Pricing Configuration
+POST,/api/v1/pricing/configuration,true,create_or_update_pricing_configuration_api_v1_pricing_configuration_post,Create Or Update Pricing Configuration
+POST,/api/v1/orders/,true,create_order_api_v1_orders__post,Create Order
+GET,/api/v1/orders/,false,read_orders_api_v1_orders__get,Read Orders
+GET,/api/v1/orders/{order_id},false,read_order_api_v1_orders__order_id__get,Read Order
+PUT,/api/v1/orders/{order_id},true,update_order_api_v1_orders__order_id__put,Update Order
+DELETE,/api/v1/orders/{order_id},false,delete_order_api_v1_orders__order_id__delete,Delete Order
+POST,/api/v1/orders/quotes/,true,create_quote_api_v1_orders_quotes__post,Create Quote
+GET,/api/v1/orders/quotes/,false,read_quotes_api_v1_orders_quotes__get,Read Quotes
+GET,/api/v1/orders/quotes/{quote_id},false,read_quote_api_v1_orders_quotes__quote_id__get,Read Quote
+PUT,/api/v1/orders/quotes/{quote_id},true,update_quote_api_v1_orders_quotes__quote_id__put,Update Quote
+DELETE,/api/v1/orders/quotes/{quote_id},false,delete_quote_api_v1_orders_quotes__quote_id__delete,Delete Quote
+POST,/api/v1/orders/quotes/{quote_id}/convert-to-order,false,convert_quote_to_order_api_v1_orders_quotes__quote_id__convert_to_order_post,Convert Quote To Order
+POST,/api/v1/orders/{order_id}/create-payment-intent,false,create_payment_intent_for_order_api_v1_orders__order_id__create_payment_intent_post,Create Payment Intent For Order
+GET,/api/v1/orders/{order_id}/invoice/pdf,false,get_order_invoice_pdf_api_v1_orders__order_id__invoice_pdf_get,Get Order Invoice Pdf
+GET,/api/v1/orders/{order_id}/client-portal-url,false,get_client_portal_url_for_order_api_v1_orders__order_id__client_portal_url_get,Get Client Portal Url For Order
+POST,/api/v1/calendar/events/,true,create_calendar_event_api_v1_calendar_events__post,Create Calendar Event
+GET,/api/v1/calendar/events/,false,read_calendar_events_api_v1_calendar_events__get,Read Calendar Events
+GET,/api/v1/calendar/events/{event_id},false,read_calendar_event_api_v1_calendar_events__event_id__get,Read Calendar Event
+PUT,/api/v1/calendar/events/{event_id},true,update_calendar_event_api_v1_calendar_events__event_id__put,Update Calendar Event
+DELETE,/api/v1/calendar/events/{event_id},false,delete_calendar_event_api_v1_calendar_events__event_id__delete,Delete Calendar Event
+POST,/api/v1/tasks/,true,create_task_api_v1_tasks__post,Create Task
+GET,/api/v1/tasks/,false,read_tasks_api_v1_tasks__get,Read Tasks
+GET,/api/v1/tasks/{task_id},false,read_task_api_v1_tasks__task_id__get,Read Task
+PUT,/api/v1/tasks/{task_id},true,update_task_api_v1_tasks__task_id__put,Update Task
+DELETE,/api/v1/tasks/{task_id},false,delete_task_api_v1_tasks__task_id__delete,Delete Task
+POST,/api/v1/tasks/send-weekly-digest,false,trigger_weekly_digest_api_v1_tasks_send_weekly_digest_post,Trigger Weekly Digest
+POST,/api/v1/expenses/,true,create_expense_api_v1_expenses__post,Create Expense
+GET,/api/v1/expenses/,false,read_expenses_api_v1_expenses__get,Read Expenses
+GET,/api/v1/expenses/{expense_id},false,read_expense_api_v1_expenses__expense_id__get,Read Expense
+PUT,/api/v1/expenses/{expense_id},true,update_expense_api_v1_expenses__expense_id__put,Update Expense
+DELETE,/api/v1/expenses/{expense_id},false,delete_expense_api_v1_expenses__expense_id__delete,Delete Expense
+GET,/api/v1/expenses/receipts/{filename},false,get_receipt_file_api_v1_expenses_receipts__filename__get,Get Receipt File
+POST,/api/v1/mileage/,true,create_mileage_log_api_v1_mileage__post,Create Mileage Log
+GET,/api/v1/mileage/,false,read_mileage_logs_api_v1_mileage__get,Read Mileage Logs
+GET,/api/v1/mileage/{log_id},false,read_mileage_log_api_v1_mileage__log_id__get,Read Mileage Log
+PUT,/api/v1/mileage/{log_id},true,update_mileage_log_api_v1_mileage__log_id__put,Update Mileage Log
+DELETE,/api/v1/mileage/{log_id},false,delete_mileage_log_api_v1_mileage__log_id__delete,Delete Mileage Log
+GET,/api/v1/reports/profit-and-loss,false,get_profit_and_loss_report_api_v1_reports_profit_and_loss_get,Profit and Loss Report
+GET,/api/v1/reports/sales-by-product,false,get_sales_by_product_report_api_v1_reports_sales_by_product_get,Sales by Product Report
+GET,/api/v1/reports/ingredient-usage,false,get_ingredient_usage_report_api_v1_reports_ingredient_usage_get,Ingredient Usage Report
+GET,/api/v1/reports/low-stock,false,get_low_stock_report_api_v1_reports_low_stock_get,Low Stock Report
+GET,/api/v1/shop/manage/configuration/,false,get_shop_configuration_api_v1_shop_manage_configuration__get,Get Shop Configuration
+PUT,/api/v1/shop/manage/configuration/,true,update_shop_configuration_api_v1_shop_manage_configuration__put,Update Shop Configuration
+POST,/api/v1/shop/manage/configuration/,true,create_shop_configuration_api_v1_shop_manage_configuration__post,Create Shop Configuration
+DELETE,/api/v1/shop/manage/configuration/,false,delete_shop_configuration_api_v1_shop_manage_configuration__delete,Delete Shop Configuration
+GET,/api/v1/shop/manage/configuration/embed-snippet/,false,get_shop_embed_snippet_api_v1_shop_manage_configuration_embed_snippet__get,Get Shop Embed Snippet
+GET,/api/v1/shop/public/{shop_slug},false,view_public_shop_api_v1_shop_public__shop_slug__get,View Public Shop
+POST,/api/v1/shop/public/{shop_slug}/order,true,place_order_from_public_shop_api_v1_shop_public__shop_slug__order_post,Place Order From Public Shop
+POST,/api/v1/inventory/ingredients/{ingredient_id}/adjust-stock,false,adjust_ingredient_stock_api_v1_inventory_ingredients__ingredient_id__adjust_stock_post,Adjust Ingredient Stock
+POST,/api/v1/inventory/run-low-stock-check,false,trigger_low_stock_check_api_v1_inventory_run_low_stock_check_post,Trigger Low Stock Check
+GET,/api/v1/marketing/segments/{segment_type}/contacts,false,get_segment_contacts_api_v1_marketing_segments__segment_type__contacts_get,Get Segment Contacts
+POST,/api/v1/marketing/campaigns/send,true,send_marketing_campaign_api_v1_marketing_campaigns_send_post,Send Marketing Campaign
+POST,/api/v1/marketing/campaigns/template/basic,true,get_basic_campaign_template_preview_api_v1_marketing_campaigns_template_basic_post,Get Basic Campaign Template Preview
+GET,/health,false,health_check_health_get,Health Check

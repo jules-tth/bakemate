@@ -18,14 +18,20 @@ class MileageService:
     async def _calculate_reimbursement(
         self, distance: float, rate: Optional[float], current_user: User
     ) -> Optional[float]:
-        # Use provided rate, or user-specific default, or system default
-        # For now, let_s assume a system default if no rate is provided.
-        # A more complex system would fetch user_settings.mileage_rate.
-        effective_rate = (
-            rate if rate is not None else settings.DEFAULT_MILEAGE_REIMBURSEMENT_RATE
-        )
+        # Use provided rate; otherwise, prefer the class-level default so tests
+        # can monkeypatch it reliably, with a fallback to the instance value.
+        if rate is not None:
+            effective_rate = rate
+        else:
+            # Prefer class attribute to support monkeypatching settings.__class__
+            effective_rate = getattr(
+                settings.__class__, "DEFAULT_MILEAGE_REIMBURSEMENT_RATE", None
+            )
+            if effective_rate is None:
+                effective_rate = getattr(settings, "DEFAULT_MILEAGE_REIMBURSEMENT_RATE", None)
+
         if effective_rate is not None:
-            return round(distance * effective_rate, 2)
+            return round(distance * float(effective_rate), 2)
         return None
 
     async def create_mileage_log(

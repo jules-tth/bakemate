@@ -1,5 +1,9 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { expect, test } from 'vitest';
+
+const assert = {
+  equal: (actual: unknown, expected: unknown) => expect(actual).toBe(expected),
+  deepEqual: (actual: unknown, expected: unknown) => expect(actual).toEqual(expected),
+};
 
 import {
   dismissGuardedOpsRetryFeedback,

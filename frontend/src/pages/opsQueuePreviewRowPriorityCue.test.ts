@@ -1,5 +1,8 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { expect, test } from 'vitest';
+
+const assert = {
+  deepEqual: (actual: unknown, expected: unknown) => expect(actual).toEqual(expected),
+};
 
 import { getOpsQueuePreviewRowPriorityCue } from './opsQueuePreviewRowPriorityCue.ts';
 
