@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 
+def _split_env_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 class Settings(BaseSettings):
     # API settings
     API_V1_STR: str = "/api/v1"
@@ -51,7 +55,14 @@ class Settings(BaseSettings):
     # SECURE_COOKIE_NAME: str = "bakemate_auth"
 
     # CORS (Cross-Origin Resource Sharing)
-    # BACKEND_CORS_ORIGINS: list[str] = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(',')
+    BACKEND_CORS_ORIGINS: str = os.getenv(
+        "BACKEND_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
+
+    @property
+    def backend_cors_origins(self) -> list[str]:
+        return _split_env_list(self.BACKEND_CORS_ORIGINS)
 
     # Default user settings (example)
     # DEFAULT_USER_HOURLY_RATE: float = 25.0

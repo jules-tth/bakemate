@@ -1064,6 +1064,8 @@ class OrderService:
         queue_summary: OrderQueueSummary,
         risk_summary: OrderRiskSummary,
         ops_summary: OrderOpsSummary,
+        *,
+        is_imported: bool,
     ) -> OrderPaymentFocusSummary:
         today = _utcnow().date()
         balance_due_amount = round(max(payment_summary.amount_due - payment_summary.deposit_outstanding, 0.0), 2)
@@ -1154,6 +1156,23 @@ class OrderService:
         else:
             amount_owed_now = payment_summary.amount_due
 
+        trust_state = "current"
+        trust_label = "Current BakeMate payment context"
+        trust_note = "Payment status comes from current BakeMate order data."
+        historical_payment_label: Optional[str] = None
+        historical_payment_note: Optional[str] = None
+        if is_imported:
+            trust_state = "legacy_limited"
+            trust_label = "Imported payment history is legacy-limited"
+            trust_note = (
+                "This order was imported from legacy data, so BakeMate is showing a conservative payment snapshot "
+                "instead of a reconstructed payment ledger. Treat historical payment history as unknown unless you have a second source."
+            )
+            historical_payment_label = "Historical payment: unknown"
+            historical_payment_note = (
+                "Legacy payment history may be incomplete in this import. Use a second source before treating earlier payments as confirmed."
+            )
+
         return OrderPaymentFocusSummary(
             amount_owed_now=round(amount_owed_now, 2),
             payment_state=payment_state,
@@ -1164,6 +1183,11 @@ class OrderService:
             risk_note=risk_note,
             next_step=ops_summary.next_action,
             next_step_detail=ops_summary.ops_attention,
+            trust_state=trust_state,
+            trust_label=trust_label,
+            trust_note=trust_note,
+            historical_payment_label=historical_payment_label,
+            historical_payment_note=historical_payment_note,
         )
 
     def _build_handoff_focus_summary(
@@ -1471,8 +1495,8 @@ class OrderService:
             "Confirm pickup handoff details": "Confirm pickup handoff",
             "Lock the handoff basics": "Lock handoff basics",
             "Lock the handoff basics first": "Lock handoff basics",
-            "Lock the missing production basics": "Lock bake details",
-            "Confirm production details": "Confirm bake details",
+            "Lock the missing production basics": "Lock production basics",
+            "Confirm production details": "Confirm production basics",
             "Proceed with production prep": "Start production prep",
             "Use the saved contact details": "Use contact info",
             "Add an email backup if you talk to the customer": "Add email backup",
@@ -1483,17 +1507,17 @@ class OrderService:
             "Add an email backup": "Add email backup",
             "Review deposit follow-up": "Review deposit",
             "Collect the overdue deposit": "Collect deposit",
-            "Collect the overdue balance": "Collect balance",
-            "Review final balance collection": "Review balance collection",
+            "Collect the overdue balance": "Collect final balance",
+            "Review final balance collection": "Review final balance",
             "Proceed with today’s order plan": "Proceed with order plan",
             "Recheck timing and proceed": "Recheck timing",
             "Keep the order on track": "Keep on track",
         }.get(next_step, next_step)
 
-        if normalized_reason == "production details need clarification" and compact_next_step == "Confirm bake details":
-            compact_next_step = "Clarify bake details"
-        elif normalized_reason.startswith("production details are thin") and compact_next_step == "Confirm bake details":
-            compact_next_step = "Clarify bake details"
+        if normalized_reason == "production details need clarification" and compact_next_step == "Confirm production basics":
+            compact_next_step = "Clarify production basics"
+        elif normalized_reason.startswith("production details are thin") and compact_next_step == "Confirm production basics":
+            compact_next_step = "Clarify production basics"
         elif normalized_reason == "invoice is still missing basics for today" and compact_next_step in {"Finish invoice", "Complete invoice details"}:
             compact_next_step = "Finish invoice"
 
@@ -1503,19 +1527,19 @@ class OrderService:
         normalized_reason = reason_summary.strip().rstrip(".")
 
         if normalized_reason.startswith("Deposit is still open "):
-            compact_reason = "Deposit still open"
+            compact_reason = "Deposit due"
         elif normalized_reason.startswith("Deposit is still unpaid "):
-            compact_reason = "Deposit overdue"
+            compact_reason = "Overdue deposit"
         elif normalized_reason.startswith("Final balance is overdue "):
-            compact_reason = "Final balance overdue"
+            compact_reason = "Overdue final balance"
         elif normalized_reason.startswith("Final balance is still open "):
-            compact_reason = "Final balance still open"
+            compact_reason = "Final balance due"
         else:
             compact_reason = {
                 "Confirm pickup vs delivery so today’s release plan is clear": "Handoff method not confirmed",
-                "Invoice is still missing basics for today": "Invoice details missing",
-                "production basics missing": "Bake details missing",
-                "production details need clarification": "Bake details need clarification",
+                "Invoice is still missing basics for today": "Invoice basics missing",
+                "production basics missing": "Production basics missing",
+                "production details need clarification": "Production basics need clarification",
                 "contact basics missing": "Contact info missing",
                 "contact fallback is thin": "Backup contact info missing",
                 "handoff basics missing": "Handoff basics missing",
@@ -1523,6 +1547,16 @@ class OrderService:
 
         prefix = "Blocked" if readiness_label == "Blocked for today" else "Attention"
         return f"{prefix}: {compact_reason}"
+
+    def _build_queue_payment_trust_preview(self, *, payment_focus_summary: OrderPaymentFocusSummary) -> Optional[str]:
+        if payment_focus_summary.trust_state != "legacy_limited":
+            return None
+        return "Payment trust: legacy-limited"
+
+    def _build_review_payment_trust_preview(self, *, payment_focus_summary: OrderPaymentFocusSummary) -> Optional[str]:
+        if payment_focus_summary.trust_state != "legacy_limited":
+            return None
+        return "Payment trust: legacy-limited"
 
     def _build_day_running_contact_preview(
         self,
@@ -1593,10 +1627,14 @@ class OrderService:
         if payment_focus_summary.collection_stage == "deposit":
             return f"Collect: ${payment_focus_summary.amount_owed_now:.2f} deposit"
         if payment_focus_summary.collection_stage == "balance":
-            return f"Collect: ${payment_focus_summary.amount_owed_now:.2f} balance"
+            return f"Collect: ${payment_focus_summary.amount_owed_now:.2f} final balance"
         if payment_focus_summary.collection_stage == "settled":
-            return "Payment: fully paid"
-        return "Payment: amount needs review"
+            return "Paid in full"
+        if next_step == "Review deposit follow-up":
+            return "Deposit review needed"
+        if next_step == "Review final balance collection":
+            return "Final balance review needed"
+        return "Payment review needed"
 
     def _build_day_running_production_preview(
         self,
@@ -1660,7 +1698,7 @@ class OrderService:
             return None
 
         invoice_related_next_steps = {
-            "Complete invoice details",
+            "Complete invoice basics",
             "Complete invoice basics",
             "Send invoice with deposit guidance",
             "Confirm final payment timing",
@@ -1856,7 +1894,7 @@ class OrderService:
                 (
                     "invoice",
                     "Invoice is still missing basics for today.",
-                    "Complete invoice details",
+                    "Complete invoice basics",
                     invoice_summary.missing_fields[0].replace("_", " ") if invoice_summary.missing_fields else "invoice basics missing",
                 )
             )
@@ -2026,6 +2064,9 @@ class OrderService:
             queue_reason_preview = None
             queue_next_step_preview = None
 
+        queue_payment_trust_preview = self._build_queue_payment_trust_preview(
+            payment_focus_summary=payment_focus_summary,
+        )
         queue_contact_preview = self._build_day_running_contact_preview(
             readiness_label=readiness_label,
             primary_category=primary_category,
@@ -2075,6 +2116,7 @@ class OrderService:
             primary_blocker_label=_humanize_enum_label(primary_label),
             queue_reason_preview=queue_reason_preview,
             queue_next_step_preview=queue_next_step_preview,
+            queue_payment_trust_preview=queue_payment_trust_preview,
             queue_contact_preview=queue_contact_preview,
             queue_payment_preview=queue_payment_preview,
             queue_handoff_preview=queue_handoff_preview,
@@ -2094,6 +2136,7 @@ class OrderService:
         queue_summary: OrderQueueSummary,
         risk_summary: OrderRiskSummary,
         handoff_focus_summary: OrderHandoffFocusSummary,
+        payment_focus_summary: OrderPaymentFocusSummary,
         ops_summary: OrderOpsSummary,
     ) -> OrderReviewFocusSummary:
         customer_name = customer_summary.name or "Customer name still missing"
@@ -2161,6 +2204,9 @@ class OrderService:
             payment_confidence=payment_confidence,
             invoice_confidence=invoice_confidence,
             handoff_confidence=handoff_confidence,
+            payment_trust_preview=self._build_review_payment_trust_preview(
+                payment_focus_summary=payment_focus_summary,
+            ),
             missing_basics=missing_basics,
             risk_note=risk_note,
             next_step=ops_summary.next_action,
@@ -2201,7 +2247,7 @@ class OrderService:
         if not invoice_summary.is_ready:
             return build_summary(
                 action_class="invoice_blocked",
-                next_action="Complete invoice details",
+                next_action="Complete invoice basics",
                 ops_attention="Invoice blocked until missing fields are filled in.",
                 primary_cta_label="Finish invoice",
                 primary_cta_panel="invoice",
@@ -2338,14 +2384,15 @@ class OrderService:
             invoice_summary,
             risk_summary,
         )
+        is_imported, legacy_status_raw, import_source = self._derive_import_metadata(order)
         payment_focus_summary = self._build_payment_focus_summary(
             order,
             payment_summary,
             queue_summary,
             risk_summary,
             ops_summary,
+            is_imported=is_imported,
         )
-        is_imported, legacy_status_raw, import_source = self._derive_import_metadata(order)
         review_reasons, primary_review_reason, review_next_check = self._build_import_review_triage(
             is_imported=is_imported,
             customer_summary=customer_summary,
@@ -2366,6 +2413,7 @@ class OrderService:
             queue_summary,
             risk_summary,
             handoff_focus_summary,
+            payment_focus_summary,
             ops_summary,
         )
         production_focus_summary = self._build_production_focus_summary(

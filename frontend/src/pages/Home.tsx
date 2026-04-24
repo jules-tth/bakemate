@@ -10,6 +10,7 @@ export default function DashboardLayout() {
       <div className="w-64 bg-gray-800 text-white flex flex-col">
         <div className="px-8 py-4 text-2xl font-bold">BakeMate</div>
         <nav className="flex-grow">
+          <Link to="/ops" className="block px-8 py-3 text-sm hover:bg-gray-700">Ops Home</Link>
           <Link to="/dashboard" className="block px-8 py-3 text-sm hover:bg-gray-700">Dashboard</Link>
           <Link to="/recipes" className="block px-8 py-3 text-sm hover:bg-gray-700">Recipes</Link>
           <Link to="/ingredients" className="block px-8 py-3 text-sm hover:bg-gray-700">Ingredients</Link>

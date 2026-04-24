@@ -317,6 +317,13 @@ export default function OrderDetail() {
                       <div className="mt-3 text-sm text-slate-700">{order.contact_focus_summary.attention_note}</div>
                     </div>
 
+                    {order.review_focus_summary.payment_trust_preview ? (
+                      <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Payment trust</div>
+                        <div className="mt-2 text-sm text-slate-900">{order.review_focus_summary.payment_trust_preview}</div>
+                      </div>
+                    ) : null}
+
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="rounded-xl border border-slate-200 p-4">
                         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment confidence</div>
@@ -478,6 +485,25 @@ export default function OrderDetail() {
 
                 <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.2fr),minmax(0,0.8fr)]">
                   <div className="space-y-4">
+                    <div className={`rounded-xl border p-4 ${order.payment_focus_summary.trust_state === 'legacy_limited' ? 'border-sky-200 bg-sky-50' : 'border-emerald-200 bg-emerald-50'}`}>
+                      <div className={`text-xs font-semibold uppercase tracking-wide ${order.payment_focus_summary.trust_state === 'legacy_limited' ? 'text-sky-700' : 'text-emerald-700'}`}>
+                        Payment trust boundary
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-slate-900">{order.payment_focus_summary.trust_label}</div>
+                      <div className="mt-1 text-sm text-slate-700">{order.payment_focus_summary.trust_note}</div>
+                    </div>
+
+                    {order.payment_focus_summary.historical_payment_label ? (
+                      <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                          {order.payment_focus_summary.historical_payment_label}
+                        </div>
+                        <div className="mt-2 text-sm text-slate-900">
+                          {order.payment_focus_summary.historical_payment_note}
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
                       <div className="text-xs font-semibold uppercase tracking-wide text-rose-700">Amount owed now</div>
                       <div className="mt-2 text-3xl font-bold text-slate-900">
