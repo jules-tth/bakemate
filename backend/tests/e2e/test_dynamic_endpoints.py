@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 import csv
-import os
+from pathlib import Path
 from main import app
 
 
@@ -14,13 +14,7 @@ def client():
 def get_endpoints():
     """Read endpoints from CSV file."""
     endpoints = []
-    # Correctly resolve the path to the CSV file
-    csv_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", ".dump", "endpoints.csv")
-    )
-
-    if not os.path.exists(csv_path):
-        return []
+    csv_path = Path(__file__).resolve().parents[3] / ".dump" / "endpoints.csv"
 
     with open(csv_path, "r") as f:
         reader = csv.DictReader(f)

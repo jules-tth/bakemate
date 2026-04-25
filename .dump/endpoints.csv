@@ -20,6 +20,9 @@ GET,/api/v1/pricing/configuration,false,get_pricing_configuration_api_v1_pricing
 POST,/api/v1/pricing/configuration,true,create_or_update_pricing_configuration_api_v1_pricing_configuration_post,Create Or Update Pricing Configuration
 POST,/api/v1/orders/,true,create_order_api_v1_orders__post,Create Order
 GET,/api/v1/orders/,false,read_orders_api_v1_orders__get,Read Orders
+GET,/api/v1/orders/day-running/summary,false,read_day_running_queue_summary_api_v1_orders_day_running_summary_get,Read Day Running Queue Summary
+GET,/api/v1/orders/imported/summary,false,read_imported_order_summary_api_v1_orders_imported_summary_get,Read Imported Order Summary
+GET,/api/v1/orders/summary,false,orders_summary_api_v1_orders_summary_get,Orders Summary
 GET,/api/v1/orders/{order_id},false,read_order_api_v1_orders__order_id__get,Read Order
 PUT,/api/v1/orders/{order_id},true,update_order_api_v1_orders__order_id__put,Update Order
 DELETE,/api/v1/orders/{order_id},false,delete_order_api_v1_orders__order_id__delete,Delete Order
@@ -43,17 +46,21 @@ GET,/api/v1/tasks/{task_id},false,read_task_api_v1_tasks__task_id__get,Read Task
 PUT,/api/v1/tasks/{task_id},true,update_task_api_v1_tasks__task_id__put,Update Task
 DELETE,/api/v1/tasks/{task_id},false,delete_task_api_v1_tasks__task_id__delete,Delete Task
 POST,/api/v1/tasks/send-weekly-digest,false,trigger_weekly_digest_api_v1_tasks_send_weekly_digest_post,Trigger Weekly Digest
+POST,/api/v1/expenses/import,false,import_expenses_from_csv_api_v1_expenses_import_post,Import Expenses From Csv
+POST,/api/v1/expenses/import-file,true,import_expenses_file_api_v1_expenses_import_file_post,Import Expenses File
 POST,/api/v1/expenses/,true,create_expense_api_v1_expenses__post,Create Expense
 GET,/api/v1/expenses/,false,read_expenses_api_v1_expenses__get,Read Expenses
 GET,/api/v1/expenses/{expense_id},false,read_expense_api_v1_expenses__expense_id__get,Read Expense
 PUT,/api/v1/expenses/{expense_id},true,update_expense_api_v1_expenses__expense_id__put,Update Expense
 DELETE,/api/v1/expenses/{expense_id},false,delete_expense_api_v1_expenses__expense_id__delete,Delete Expense
 GET,/api/v1/expenses/receipts/{filename},false,get_receipt_file_api_v1_expenses_receipts__filename__get,Get Receipt File
+POST,/api/v1/mileage/import,false,import_mileage_from_csv_api_v1_mileage_import_post,Import Mileage From Csv
 POST,/api/v1/mileage/,true,create_mileage_log_api_v1_mileage__post,Create Mileage Log
 GET,/api/v1/mileage/,false,read_mileage_logs_api_v1_mileage__get,Read Mileage Logs
 GET,/api/v1/mileage/{log_id},false,read_mileage_log_api_v1_mileage__log_id__get,Read Mileage Log
 PUT,/api/v1/mileage/{log_id},true,update_mileage_log_api_v1_mileage__log_id__put,Update Mileage Log
 DELETE,/api/v1/mileage/{log_id},false,delete_mileage_log_api_v1_mileage__log_id__delete,Delete Mileage Log
+POST,/api/v1/mileage/import-file,true,import_mileage_file_api_v1_mileage_import_file_post,Import Mileage File
 GET,/api/v1/reports/profit-and-loss,false,get_profit_and_loss_report_api_v1_reports_profit_and_loss_get,Profit and Loss Report
 GET,/api/v1/reports/sales-by-product,false,get_sales_by_product_report_api_v1_reports_sales_by_product_get,Sales by Product Report
 GET,/api/v1/reports/ingredient-usage,false,get_ingredient_usage_report_api_v1_reports_ingredient_usage_get,Ingredient Usage Report
@@ -70,4 +77,7 @@ POST,/api/v1/inventory/run-low-stock-check,false,trigger_low_stock_check_api_v1_
 GET,/api/v1/marketing/segments/{segment_type}/contacts,false,get_segment_contacts_api_v1_marketing_segments__segment_type__contacts_get,Get Segment Contacts
 POST,/api/v1/marketing/campaigns/send,true,send_marketing_campaign_api_v1_marketing_campaigns_send_post,Send Marketing Campaign
 POST,/api/v1/marketing/campaigns/template/basic,true,get_basic_campaign_template_preview_api_v1_marketing_campaigns_template_basic_post,Get Basic Campaign Template Preview
+GET,/api/v1/dashboard/summary,false,dashboard_summary_api_v1_dashboard_summary_get,Dashboard Summary
+GET,/api/v1/dashboard/orders,false,dashboard_orders_api_v1_dashboard_orders_get,Dashboard Orders
+GET,/api/v1/dashboard/revenue,false,dashboard_revenue_api_v1_dashboard_revenue_get,Dashboard Revenue
 GET,/health,false,health_check_health_get,Health Check
